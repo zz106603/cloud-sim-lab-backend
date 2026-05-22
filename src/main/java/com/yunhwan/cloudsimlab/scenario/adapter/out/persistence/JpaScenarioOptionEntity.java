@@ -26,13 +26,14 @@ class JpaScenarioOptionEntity {
 	protected JpaScenarioOptionEntity() {
 	}
 
-	private JpaScenarioOptionEntity(String name, String description) {
+	private JpaScenarioOptionEntity(Long id, String name, String description) {
+		this.id = id;
 		this.name = name;
 		this.description = description;
 	}
 
 	static JpaScenarioOptionEntity from(ScenarioOption option) {
-		return new JpaScenarioOptionEntity(option.getName(), option.getDescription());
+		return new JpaScenarioOptionEntity(option.getId(), option.getName(), option.getDescription());
 	}
 
 	ScenarioOption toDomain() {

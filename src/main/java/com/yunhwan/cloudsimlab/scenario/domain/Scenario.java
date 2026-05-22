@@ -27,7 +27,7 @@ public class Scenario {
 		this.level = level;
 		this.summary = summary;
 		this.description = description;
-		this.options = List.copyOf(options);
+		this.options = options == null ? List.of() : List.copyOf(options);
 	}
 
 	public static Scenario newScenario(

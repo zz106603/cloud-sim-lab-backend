@@ -52,6 +52,7 @@ class JpaScenarioEntity {
 	}
 
 	private JpaScenarioEntity(
+			Long id,
 			String title,
 			ScenarioCategory category,
 			ScenarioLevel level,
@@ -59,6 +60,7 @@ class JpaScenarioEntity {
 			String description,
 			List<JpaScenarioOptionEntity> options
 	) {
+		this.id = id;
 		this.title = title;
 		this.category = category;
 		this.level = level;
@@ -69,6 +71,7 @@ class JpaScenarioEntity {
 
 	static JpaScenarioEntity from(Scenario scenario) {
 		return new JpaScenarioEntity(
+				scenario.getId(),
 				scenario.getTitle(),
 				scenario.getCategory(),
 				scenario.getLevel(),
