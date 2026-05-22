@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentSeedPort;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
@@ -20,13 +20,11 @@ import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class LearningDocumentControllerTests {
 
 	@Autowired
 	private MockMvc mockMvc;
-
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
 
 	@Autowired
 	private LearningDocumentSeedPort seedPort;
@@ -35,7 +33,6 @@ class LearningDocumentControllerTests {
 
 	@BeforeEach
 	void setUp() {
-		jdbcTemplate.update("delete from learning_document");
 		document = seedPort.save(LearningDocument.newDocument(
 				"Virtual machines and compute capacity",
 				DocumentCategory.COMPUTE,
