@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cloudsimlab}
+    username: ${SPRING_DATASOURCE_USERNAME:cloudsimlab}
+    password: ${SPRING_DATASOURCE_PASSWORD:cloudsimlab}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
