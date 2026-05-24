@@ -2,6 +2,7 @@ package com.yunhwan.cloudsimlab.scenario;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +45,8 @@ class ScenarioControllerTests {
 				"Choose compute capacity.",
 				"Compare compute choices before traffic increases.",
 				List.of(
-						ScenarioOption.newOption("Small instance", "Lower cost with limited capacity."),
-						ScenarioOption.newOption("Large instance", "Higher capacity with higher cost.")
+						ScenarioOption.newOption("Small instance", "Lower cost with limited capacity.", 1, false, 0),
+						ScenarioOption.newOption("Large instance", "Higher capacity with higher cost.", 2, true, 0)
 				)
 		));
 		seedPort.save(Scenario.newScenario(
@@ -54,7 +56,7 @@ class ScenarioControllerTests {
 				"Design basic network boundaries.",
 				"Decide how to expose only the required network surface.",
 				List.of(
-						ScenarioOption.newOption("Public subnet", "Expose resources to inbound internet traffic.")
+						ScenarioOption.newOption("Public subnet", "Expose resources to inbound internet traffic.", 1, false, 2)
 				)
 		));
 	}
@@ -101,5 +103,55 @@ class ScenarioControllerTests {
 	void findOneReturnsNotFoundForMissingScenario() throws Exception {
 		mockMvc.perform(get("/api/scenarios/{scenarioId}", 999L))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void simulateReturnsGoodResultWhenCoreOptionIsSelected() throws Exception {
+		Long coreOptionId = computeScenario.getOptions().get(1).getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(coreOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.scenarioId").value(computeScenario.getId()))
+				.andExpect(jsonPath("$.resultType").value("GOOD"))
+				.andExpect(jsonPath("$.score").value(2))
+				.andExpect(jsonPath("$.riskScore").value(0))
+				.andExpect(jsonPath("$.summary").value("The selected options address the scenario well."))
+				.andExpect(jsonPath("$.detail").exists())
+				.andExpect(jsonPath("$.selectedOptions", hasSize(1)))
+				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId));
+	}
+
+	@Test
+	void simulateReturnsNotFoundForMissingScenario() throws Exception {
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", 999L)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[1]}
+								"""))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void simulateReturnsBadRequestForUnknownOptionId() throws Exception {
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[999]}
+								"""))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void simulateReturnsBadRequestForEmptySelectedOptionIds() throws Exception {
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[]}
+								"""))
+				.andExpect(status().isBadRequest());
 	}
 }
