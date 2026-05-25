@@ -6,6 +6,8 @@ import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.SimulationResult;
+import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
 
 final class ScenarioDtos {
 
@@ -51,6 +53,33 @@ final class ScenarioDtos {
 	record OptionResponse(Long id, String name, String description) {
 		static OptionResponse from(ScenarioOption option) {
 			return new OptionResponse(option.getId(), option.getName(), option.getDescription());
+		}
+	}
+
+	record SimulateRequest(List<Long> selectedOptionIds) {
+	}
+
+	record SimulationResponse(
+			Long scenarioId,
+			SimulationResultType resultType,
+			int score,
+			int riskScore,
+			String summary,
+			String detail,
+			List<OptionResponse> selectedOptions
+	) {
+		static SimulationResponse from(SimulationResult result) {
+			return new SimulationResponse(
+					result.getScenarioId(),
+					result.getResultType(),
+					result.getScore(),
+					result.getRiskScore(),
+					result.getSummary(),
+					result.getDetail(),
+					result.getSelectedOptions().stream()
+							.map(OptionResponse::from)
+							.toList()
+			);
 		}
 	}
 }
