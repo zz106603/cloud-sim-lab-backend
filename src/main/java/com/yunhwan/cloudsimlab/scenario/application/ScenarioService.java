@@ -1,5 +1,6 @@
 package com.yunhwan.cloudsimlab.scenario.application;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +53,7 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		Scenario scenario = findOne(scenarioId);
 		Map<Long, ScenarioOption> optionsById = scenario.getOptions().stream()
 				.collect(Collectors.toMap(ScenarioOption::getId, Function.identity()));
-		Set<Long> selectedIds = Set.copyOf(selectedOptionIds);
+		Set<Long> selectedIds = new LinkedHashSet<>(selectedOptionIds);
 		List<Long> unknownOptionIds = selectedIds.stream()
 				.filter(optionId -> !optionsById.containsKey(optionId))
 				.toList();
@@ -78,7 +79,8 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				.filter(ScenarioOption::isCore)
 				.allMatch(option -> selectedIds.contains(option.getId()));
 
-		SimulationResultType resultType = determineResultType(hasUsefulOption, hasCoreOptions && includesAllCoreOptions, riskScore);
+		boolean satisfiesGoodCriteria = hasCoreOptions ? includesAllCoreOptions : hasUsefulOption;
+		SimulationResultType resultType = determineResultType(hasUsefulOption, satisfiesGoodCriteria, riskScore);
 		return new SimulationResult(
 				scenario.getId(),
 				resultType,
@@ -90,14 +92,14 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		);
 	}
 
-	private SimulationResultType determineResultType(boolean hasUsefulOption, boolean includesAllCoreOptions, int riskScore) {
+	private SimulationResultType determineResultType(boolean hasUsefulOption, boolean satisfiesGoodCriteria, int riskScore) {
 		if (!hasUsefulOption) {
 			return SimulationResultType.WRONG;
 		}
 		if (riskScore >= 2) {
 			return SimulationResultType.RISKY;
 		}
-		if (includesAllCoreOptions) {
+		if (satisfiesGoodCriteria) {
 			return SimulationResultType.GOOD;
 		}
 		return SimulationResultType.PARTIAL;
