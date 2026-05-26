@@ -126,6 +126,45 @@ class ScenarioControllerTests {
 	}
 
 	@Test
+	void simulateReturnsGoodResultWhenUsefulScenarioHasNoCoreOptions() throws Exception {
+		Scenario noCoreScenario = seedPort.save(Scenario.newScenario(
+				"Tune cache capacity",
+				ScenarioCategory.COMPUTE,
+				ScenarioLevel.BEGINNER,
+				"Choose cache settings.",
+				"Select a useful cache option.",
+				List.of(
+						ScenarioOption.newOption("Increase cache size", "Reduce repeated reads.", 2, false, 0)
+				)
+		));
+		Long optionId = noCoreScenario.getOptions().getFirst().getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", noCoreScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(optionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resultType").value("GOOD"));
+	}
+
+	@Test
+	void simulatePreservesSelectedOptionOrderAfterRemovingDuplicates() throws Exception {
+		Long firstSelectedOptionId = computeScenario.getOptions().get(1).getId();
+		Long secondSelectedOptionId = computeScenario.getOptions().get(0).getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d,%d,%d]}
+								""".formatted(firstSelectedOptionId, secondSelectedOptionId, firstSelectedOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.selectedOptions", hasSize(2)))
+				.andExpect(jsonPath("$.selectedOptions[0].id").value(firstSelectedOptionId))
+				.andExpect(jsonPath("$.selectedOptions[1].id").value(secondSelectedOptionId));
+	}
+
+	@Test
 	void simulateReturnsNotFoundForMissingScenario() throws Exception {
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", 999L)
 						.contentType(MediaType.APPLICATION_JSON)
