@@ -31,8 +31,8 @@ class ScenarioSeed {
 					"Choose compute capacity for a growing web service.",
 					"Compare small and larger compute choices before traffic increases.",
 					List.of(
-							ScenarioOption.newOption("Small instance", "Lower cost with limited CPU and memory."),
-							ScenarioOption.newOption("Large instance", "Higher capacity with a higher hourly cost.")
+							ScenarioOption.newOption("Small instance", "Lower cost with limited CPU and memory.", 1, false, 0),
+							ScenarioOption.newOption("Large instance", "Higher capacity with a higher hourly cost.", 2, true, 0)
 					)
 			));
 			seedPort.save(Scenario.newScenario(
@@ -42,8 +42,8 @@ class ScenarioSeed {
 					"Place workloads across public and private network areas.",
 					"Decide how a simple service should expose only the required network surface.",
 					List.of(
-							ScenarioOption.newOption("Public subnet", "Expose resources directly to inbound internet traffic."),
-							ScenarioOption.newOption("Private subnet", "Keep resources reachable only through internal routing.")
+							ScenarioOption.newOption("Public subnet", "Expose resources directly to inbound internet traffic.", 1, false, 2),
+							ScenarioOption.newOption("Private subnet", "Keep resources reachable only through internal routing.", 2, true, 0)
 					)
 			));
 		};

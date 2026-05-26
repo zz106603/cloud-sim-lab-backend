@@ -23,20 +23,39 @@ class JpaScenarioOptionEntity {
 	@Column(nullable = false, length = 500)
 	private String description;
 
+	@Column(nullable = false, columnDefinition = "integer default 1")
+	private int score = 1;
+
+	@Column(nullable = false, columnDefinition = "boolean default false")
+	private boolean core = false;
+
+	@Column(nullable = false, columnDefinition = "integer default 0")
+	private int riskScore = 0;
+
 	protected JpaScenarioOptionEntity() {
 	}
 
-	private JpaScenarioOptionEntity(Long id, String name, String description) {
+	private JpaScenarioOptionEntity(Long id, String name, String description, int score, boolean core, int riskScore) {
 		this.id = id;
 		this.name = name;
 		this.description = description;
+		this.score = score;
+		this.core = core;
+		this.riskScore = riskScore;
 	}
 
 	static JpaScenarioOptionEntity from(ScenarioOption option) {
-		return new JpaScenarioOptionEntity(option.getId(), option.getName(), option.getDescription());
+		return new JpaScenarioOptionEntity(
+				option.getId(),
+				option.getName(),
+				option.getDescription(),
+				option.getScore(),
+				option.isCore(),
+				option.getRiskScore()
+		);
 	}
 
 	ScenarioOption toDomain() {
-		return new ScenarioOption(id, name, description);
+		return new ScenarioOption(id, name, description, score, core, riskScore);
 	}
 }
