@@ -229,6 +229,30 @@ class ScenarioControllerTests {
 	}
 
 	@Test
+	void 잘못된_JSON_본문은_BAD_REQUEST_에러를_반환한다() throws Exception {
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[1]
+								"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.message").value("Malformed or unreadable request body"));
+	}
+
+	@Test
+	void 선택지_ID_타입이_잘못되면_BAD_REQUEST_에러를_반환한다() throws Exception {
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":["invalid"]}
+								"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.message").value("Malformed or unreadable request body"));
+	}
+
+	@Test
 	void 잘못된_시뮬레이션_시나리오_ID_형식은_BAD_REQUEST_에러를_반환한다() throws Exception {
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", "invalid")
 						.contentType(MediaType.APPLICATION_JSON)
