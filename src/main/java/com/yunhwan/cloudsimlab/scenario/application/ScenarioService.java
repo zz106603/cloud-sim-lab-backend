@@ -100,11 +100,25 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 	}
 
 	private List<RelatedLearningDocument> relatedLearningDocumentsFor(Scenario scenario) {
-		DocumentCategory category = DocumentCategory.valueOf(scenario.getCategory().name());
-		return learningDocumentQueryPort.findAll().stream()
-				.filter(document -> document.getCategory() == category)
+		DocumentCategory category = documentCategoryFor(scenario.getCategory());
+		if (category == null) {
+			return List.of();
+		}
+		return learningDocumentQueryPort.findAllByCategory(category).stream()
 				.map(this::toRelatedLearningDocument)
 				.toList();
+	}
+
+	private DocumentCategory documentCategoryFor(ScenarioCategory category) {
+		if (category == null) {
+			return null;
+		}
+		return switch (category) {
+			case COMPUTE -> DocumentCategory.COMPUTE;
+			case NETWORK -> DocumentCategory.NETWORK;
+			case STORAGE -> DocumentCategory.STORAGE;
+			case SECURITY -> DocumentCategory.SECURITY;
+		};
 	}
 
 	private RelatedLearningDocument toRelatedLearningDocument(LearningDocument document) {

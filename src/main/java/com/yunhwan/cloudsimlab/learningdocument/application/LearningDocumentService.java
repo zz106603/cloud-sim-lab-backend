@@ -1,12 +1,14 @@
 package com.yunhwan.cloudsimlab.learningdocument.application;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.yunhwan.cloudsimlab.learningdocument.application.port.in.GetLearningDocumentUseCase;
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentQueryPort;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
@@ -36,9 +38,21 @@ public class LearningDocumentService implements GetLearningDocumentUseCase {
 	}
 
 	@Override
-	public List<Scenario> findRelatedScenarios(Long documentId) {
-		LearningDocument document = findOne(documentId);
-		ScenarioCategory category = ScenarioCategory.valueOf(document.getCategory().name());
-		return scenarioQueryPort.findAll(category, null);
+	public List<Scenario> findRelatedScenarios(DocumentCategory category) {
+		return scenarioCategoryFor(category)
+				.map(scenarioCategory -> scenarioQueryPort.findAll(scenarioCategory, null))
+				.orElseGet(List::of);
+	}
+
+	private Optional<ScenarioCategory> scenarioCategoryFor(DocumentCategory category) {
+		if (category == null) {
+			return Optional.empty();
+		}
+		return switch (category) {
+			case COMPUTE -> Optional.of(ScenarioCategory.COMPUTE);
+			case NETWORK -> Optional.of(ScenarioCategory.NETWORK);
+			case STORAGE -> Optional.of(ScenarioCategory.STORAGE);
+			case SECURITY -> Optional.of(ScenarioCategory.SECURITY);
+		};
 	}
 }
