@@ -31,6 +31,9 @@ public class LearningDocumentController {
 
 	@GetMapping("/{documentId}")
 	public DetailResponse findOne(@PathVariable Long documentId) {
-		return DetailResponse.from(getLearningDocumentUseCase.findOne(documentId));
+		return DetailResponse.from(
+				getLearningDocumentUseCase.findOne(documentId),
+				getLearningDocumentUseCase.findRelatedScenarios(documentId)
+		);
 	}
 }
