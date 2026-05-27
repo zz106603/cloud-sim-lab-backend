@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.in.web.LearningDocumentDtos.DetailResponse;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.in.web.LearningDocumentDtos.SummaryResponse;
 import com.yunhwan.cloudsimlab.learningdocument.application.port.in.GetLearningDocumentUseCase;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 
 @RestController
 @RequestMapping("/api/docs")
@@ -31,9 +32,10 @@ public class LearningDocumentController {
 
 	@GetMapping("/{documentId}")
 	public DetailResponse findOne(@PathVariable Long documentId) {
+		LearningDocument document = getLearningDocumentUseCase.findOne(documentId);
 		return DetailResponse.from(
-				getLearningDocumentUseCase.findOne(documentId),
-				getLearningDocumentUseCase.findRelatedScenarios(documentId)
+				document,
+				getLearningDocumentUseCase.findRelatedScenarios(document.getCategory())
 		);
 	}
 }
