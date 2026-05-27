@@ -1,6 +1,7 @@
 package com.yunhwan.cloudsimlab.common.error;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -35,6 +36,18 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
 	ErrorResponse handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
 		return new ErrorResponse("INVALID_REQUEST", "Invalid request value: " + ex.getName());
+	}
+
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	ErrorResponse handleMessageNotReadable() {
+		return new ErrorResponse("INVALID_REQUEST", "Malformed or unreadable request body");
+	}
+
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	@ExceptionHandler(Exception.class)
+	ErrorResponse handleUnexpectedException() {
+		return new ErrorResponse("INTERNAL_SERVER_ERROR", "Unexpected server error");
 	}
 
 	public record ErrorResponse(String code, String message) {
