@@ -77,7 +77,7 @@ class ScenarioControllerTests {
 	}
 
 	@Test
-	void findAllReturnsScenarioSummaries() throws Exception {
+	void 시나리오_목록은_요약_정보만_반환한다() throws Exception {
 		mockMvc.perform(get("/api/scenarios"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(2)))
@@ -91,7 +91,7 @@ class ScenarioControllerTests {
 	}
 
 	@Test
-	void findAllFiltersByCategoryAndLevel() throws Exception {
+	void 시나리오_목록은_카테고리와_난이도로_필터링된다() throws Exception {
 		mockMvc.perform(get("/api/scenarios")
 						.param("category", "COMPUTE")
 						.param("level", "BEGINNER"))
@@ -103,7 +103,7 @@ class ScenarioControllerTests {
 	}
 
 	@Test
-	void findOneReturnsScenarioDetailWithOptions() throws Exception {
+	void 시나리오_상세는_설명과_선택지를_반환한다() throws Exception {
 		mockMvc.perform(get("/api/scenarios/{scenarioId}", computeScenario.getId()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(computeScenario.getId()))
@@ -115,13 +115,23 @@ class ScenarioControllerTests {
 	}
 
 	@Test
-	void findOneReturnsNotFoundForMissingScenario() throws Exception {
+	void 존재하지_않는_시나리오_ID는_NOT_FOUND_에러를_반환한다() throws Exception {
 		mockMvc.perform(get("/api/scenarios/{scenarioId}", 999L))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("SCENARIO_NOT_FOUND"))
+				.andExpect(jsonPath("$.message").value("Scenario not found: 999"));
 	}
 
 	@Test
-	void simulateReturnsGoodResultWhenCoreOptionIsSelected() throws Exception {
+	void 잘못된_시나리오_ID_형식은_BAD_REQUEST_에러를_반환한다() throws Exception {
+		mockMvc.perform(get("/api/scenarios/{scenarioId}", "invalid"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.message").value("Invalid request value: scenarioId"));
+	}
+
+	@Test
+	void 핵심_선택지를_고르면_GOOD_시뮬레이션_결과와_관련_문서를_반환한다() throws Exception {
 		Long coreOptionId = computeScenario.getOptions().get(1).getId();
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
@@ -144,7 +154,7 @@ class ScenarioControllerTests {
 	}
 
 	@Test
-	void simulateReturnsGoodResultWhenUsefulScenarioHasNoCoreOptions() throws Exception {
+	void 핵심_선택지가_없는_시나리오는_유효한_선택지만으로_GOOD_결과를_반환한다() throws Exception {
 		Scenario noCoreScenario = seedPort.save(Scenario.newScenario(
 				"Tune cache capacity",
 				ScenarioCategory.COMPUTE,
@@ -167,7 +177,7 @@ class ScenarioControllerTests {
 	}
 
 	@Test
-	void simulatePreservesSelectedOptionOrderAfterRemovingDuplicates() throws Exception {
+	void 시뮬레이션은_중복_선택지를_제거하고_선택_순서를_유지한다() throws Exception {
 		Long firstSelectedOptionId = computeScenario.getOptions().get(1).getId();
 		Long secondSelectedOptionId = computeScenario.getOptions().get(0).getId();
 
@@ -183,32 +193,50 @@ class ScenarioControllerTests {
 	}
 
 	@Test
-	void simulateReturnsNotFoundForMissingScenario() throws Exception {
+	void 존재하지_않는_시나리오_시뮬레이션은_NOT_FOUND_에러를_반환한다() throws Exception {
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", 999L)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"selectedOptionIds":[1]}
 								"""))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("SCENARIO_NOT_FOUND"))
+				.andExpect(jsonPath("$.message").value("Scenario not found: 999"));
 	}
 
 	@Test
-	void simulateReturnsBadRequestForUnknownOptionId() throws Exception {
+	void 존재하지_않는_선택지_ID는_BAD_REQUEST_에러를_반환한다() throws Exception {
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"selectedOptionIds":[999]}
 								"""))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_SIMULATION_REQUEST"))
+				.andExpect(jsonPath("$.message").value("Unknown scenario option IDs: [999]"));
 	}
 
 	@Test
-	void simulateReturnsBadRequestForEmptySelectedOptionIds() throws Exception {
+	void 빈_선택지_목록은_BAD_REQUEST_에러를_반환한다() throws Exception {
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"selectedOptionIds":[]}
 								"""))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_SIMULATION_REQUEST"))
+				.andExpect(jsonPath("$.message").value("selectedOptionIds must not be empty"));
+	}
+
+	@Test
+	void 잘못된_시뮬레이션_시나리오_ID_형식은_BAD_REQUEST_에러를_반환한다() throws Exception {
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", "invalid")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[1]}
+								"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.message").value("Invalid request value: scenarioId"));
 	}
 }
