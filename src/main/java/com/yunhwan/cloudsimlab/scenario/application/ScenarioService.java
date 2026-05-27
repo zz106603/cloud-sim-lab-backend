@@ -10,9 +10,13 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentQueryPort;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.GetScenarioUseCase;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.SimulateScenarioUseCase;
+import com.yunhwan.cloudsimlab.scenario.domain.RelatedLearningDocument;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
@@ -25,9 +29,11 @@ import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
 public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseCase {
 
 	private final ScenarioQueryPort queryPort;
+	private final LearningDocumentQueryPort learningDocumentQueryPort;
 
-	public ScenarioService(ScenarioQueryPort queryPort) {
+	public ScenarioService(ScenarioQueryPort queryPort, LearningDocumentQueryPort learningDocumentQueryPort) {
 		this.queryPort = queryPort;
+		this.learningDocumentQueryPort = learningDocumentQueryPort;
 	}
 
 	@Override
@@ -88,7 +94,26 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				riskScore,
 				summaryFor(resultType),
 				detailFor(resultType),
-				selectedOptions
+				selectedOptions,
+				relatedLearningDocumentsFor(scenario)
+		);
+	}
+
+	private List<RelatedLearningDocument> relatedLearningDocumentsFor(Scenario scenario) {
+		DocumentCategory category = DocumentCategory.valueOf(scenario.getCategory().name());
+		return learningDocumentQueryPort.findAll().stream()
+				.filter(document -> document.getCategory() == category)
+				.map(this::toRelatedLearningDocument)
+				.toList();
+	}
+
+	private RelatedLearningDocument toRelatedLearningDocument(LearningDocument document) {
+		return new RelatedLearningDocument(
+				document.getId(),
+				document.getTitle(),
+				document.getCategory(),
+				document.getLevel(),
+				document.getSummary()
 		);
 	}
 
