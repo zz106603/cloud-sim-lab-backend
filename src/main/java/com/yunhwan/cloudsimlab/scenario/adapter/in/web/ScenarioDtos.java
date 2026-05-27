@@ -2,6 +2,9 @@ package com.yunhwan.cloudsimlab.scenario.adapter.in.web;
 
 import java.util.List;
 
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
+import com.yunhwan.cloudsimlab.scenario.domain.RelatedLearningDocument;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
@@ -66,7 +69,8 @@ final class ScenarioDtos {
 			int riskScore,
 			String summary,
 			String detail,
-			List<OptionResponse> selectedOptions
+			List<OptionResponse> selectedOptions,
+			List<RelatedLearningDocumentResponse> relatedLearningDocuments
 	) {
 		static SimulationResponse from(SimulationResult result) {
 			return new SimulationResponse(
@@ -78,7 +82,28 @@ final class ScenarioDtos {
 					result.getDetail(),
 					result.getSelectedOptions().stream()
 							.map(OptionResponse::from)
+							.toList(),
+					result.getRelatedLearningDocuments().stream()
+							.map(RelatedLearningDocumentResponse::from)
 							.toList()
+			);
+		}
+	}
+
+	record RelatedLearningDocumentResponse(
+			Long id,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary
+	) {
+		static RelatedLearningDocumentResponse from(RelatedLearningDocument document) {
+			return new RelatedLearningDocumentResponse(
+					document.id(),
+					document.title(),
+					document.category(),
+					document.level(),
+					document.summary()
 			);
 		}
 	}
