@@ -17,6 +17,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentSeedPort;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioSeedPort;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
@@ -34,10 +38,21 @@ class ScenarioControllerTests {
 	@Autowired
 	private ScenarioSeedPort seedPort;
 
+	@Autowired
+	private LearningDocumentSeedPort learningDocumentSeedPort;
+
 	private Scenario computeScenario;
+	private LearningDocument computeDocument;
 
 	@BeforeEach
 	void setUp() {
+		computeDocument = learningDocumentSeedPort.save(LearningDocument.newDocument(
+				"Virtual machines and compute capacity",
+				DocumentCategory.COMPUTE,
+				DocumentLevel.BEGINNER,
+				"Understand compute capacity.",
+				"Virtual machines run application workloads on configurable CPU and memory resources."
+		));
 		computeScenario = seedPort.save(Scenario.newScenario(
 				"Scale a web service",
 				ScenarioCategory.COMPUTE,
@@ -122,7 +137,10 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.summary").value("The selected options address the scenario well."))
 				.andExpect(jsonPath("$.detail").exists())
 				.andExpect(jsonPath("$.selectedOptions", hasSize(1)))
-				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId));
+				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId))
+				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
+				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()))
+				.andExpect(jsonPath("$.relatedLearningDocuments[0].title").value("Virtual machines and compute capacity"));
 	}
 
 	@Test
