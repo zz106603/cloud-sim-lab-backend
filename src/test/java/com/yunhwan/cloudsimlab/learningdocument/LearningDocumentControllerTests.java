@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +24,6 @@ import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
-
-import java.util.List;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -64,7 +64,7 @@ class LearningDocumentControllerTests {
 	}
 
 	@Test
-	void findAllReturnsDocumentSummaries() throws Exception {
+	void 문서_목록은_요약_정보만_반환한다() throws Exception {
 		mockMvc.perform(get("/api/docs"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(1)))
@@ -77,7 +77,7 @@ class LearningDocumentControllerTests {
 	}
 
 	@Test
-	void findOneReturnsDocumentDetail() throws Exception {
+	void 문서_상세는_본문과_관련_시나리오를_반환한다() throws Exception {
 		mockMvc.perform(get("/api/docs/{documentId}", document.getId()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(document.getId()))
@@ -89,8 +89,18 @@ class LearningDocumentControllerTests {
 	}
 
 	@Test
-	void findOneReturnsNotFoundForMissingDocument() throws Exception {
+	void 존재하지_않는_문서_ID는_NOT_FOUND_에러를_반환한다() throws Exception {
 		mockMvc.perform(get("/api/docs/{documentId}", 999L))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("LEARNING_DOCUMENT_NOT_FOUND"))
+				.andExpect(jsonPath("$.message").value("Learning document not found: 999"));
+	}
+
+	@Test
+	void 잘못된_문서_ID_형식은_BAD_REQUEST_에러를_반환한다() throws Exception {
+		mockMvc.perform(get("/api/docs/{documentId}", "invalid"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.message").value("Invalid request value: documentId"));
 	}
 }
