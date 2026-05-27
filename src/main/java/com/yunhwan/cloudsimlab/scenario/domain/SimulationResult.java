@@ -11,6 +11,7 @@ public class SimulationResult {
 	private final String summary;
 	private final String detail;
 	private final List<ScenarioOption> selectedOptions;
+	private final List<RelatedLearningDocument> relatedLearningDocuments;
 
 	public SimulationResult(
 			Long scenarioId,
@@ -19,7 +20,8 @@ public class SimulationResult {
 			int riskScore,
 			String summary,
 			String detail,
-			List<ScenarioOption> selectedOptions
+			List<ScenarioOption> selectedOptions,
+			List<RelatedLearningDocument> relatedLearningDocuments
 	) {
 		this.scenarioId = scenarioId;
 		this.resultType = resultType;
@@ -28,6 +30,7 @@ public class SimulationResult {
 		this.summary = summary;
 		this.detail = detail;
 		this.selectedOptions = selectedOptions == null ? List.of() : List.copyOf(selectedOptions);
+		this.relatedLearningDocuments = relatedLearningDocuments == null ? List.of() : List.copyOf(relatedLearningDocuments);
 	}
 
 	public Long getScenarioId() {
@@ -56,5 +59,9 @@ public class SimulationResult {
 
 	public List<ScenarioOption> getSelectedOptions() {
 		return selectedOptions;
+	}
+
+	public List<RelatedLearningDocument> getRelatedLearningDocuments() {
+		return relatedLearningDocuments;
 	}
 }
