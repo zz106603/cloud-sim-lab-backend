@@ -95,8 +95,18 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				summaryFor(resultType),
 				detailFor(resultType),
 				selectedOptions,
+				finalArchitectureFor(scenario, selectedOptions),
 				relatedLearningDocumentsFor(scenario)
 		);
+	}
+
+	private List<String> finalArchitectureFor(Scenario scenario, List<ScenarioOption> selectedOptions) {
+		return java.util.stream.Stream.concat(
+						scenario.getInitialArchitecture().stream(),
+						selectedOptions.stream().map(ScenarioOption::getName)
+				)
+				.distinct()
+				.toList();
 	}
 
 	private List<RelatedLearningDocument> relatedLearningDocumentsFor(Scenario scenario) {
@@ -146,19 +156,19 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 
 	private String summaryFor(SimulationResultType resultType) {
 		return switch (resultType) {
-			case GOOD -> "The selected options address the scenario well.";
-			case PARTIAL -> "The selected options help, but miss a core choice.";
-			case RISKY -> "The selected options include useful choices but introduce risk.";
-			case WRONG -> "The selected options do not address the scenario.";
+			case GOOD -> "선택한 구성이 시나리오 요구를 잘 해결합니다.";
+			case PARTIAL -> "일부 도움이 되지만 핵심 선택지가 빠졌습니다.";
+			case RISKY -> "효과는 있지만 위험 요소가 함께 있습니다.";
+			case WRONG -> "선택한 구성으로는 문제를 해결하기 어렵습니다.";
 		};
 	}
 
 	private String detailFor(SimulationResultType resultType) {
 		return switch (resultType) {
-			case GOOD -> "Core options are included and no high-risk tradeoff dominates the result.";
-			case PARTIAL -> "At least one useful option was selected, but the scenario still lacks a required core option.";
-			case RISKY -> "The result has useful impact, but the selected high-risk option can make the architecture fragile.";
-			case WRONG -> "Choose an option that directly improves the scenario goal.";
+			case GOOD -> "핵심 선택지가 포함되어 있고 큰 위험 요소가 없습니다.";
+			case PARTIAL -> "유효한 선택은 포함됐지만 시나리오에 필요한 핵심 선택지가 부족합니다.";
+			case RISKY -> "문제 해결에는 도움이 되지만 선택한 고위험 옵션이 구조를 취약하게 만들 수 있습니다.";
+			case WRONG -> "시나리오 목표를 직접 개선하는 선택지를 고르세요.";
 		};
 	}
 }
