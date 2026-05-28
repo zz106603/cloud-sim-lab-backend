@@ -199,6 +199,34 @@ class ScenarioControllerTests {
 	}
 
 	@Test
+	void 여러_핵심_선택지가_대안일_때_Redis_단독_선택도_GOOD_결과를_반환한다() throws Exception {
+		Scenario readHeavyScenario = seedPort.save(readHeavyScenario());
+		Long redisOptionId = readHeavyScenario.getOptions().get(0).getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", readHeavyScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(redisOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resultType").value("GOOD"));
+	}
+
+	@Test
+	void 여러_핵심_선택지가_대안일_때_ReadReplica_단독_선택도_GOOD_결과를_반환한다() throws Exception {
+		Scenario readHeavyScenario = seedPort.save(readHeavyScenario());
+		Long readReplicaOptionId = readHeavyScenario.getOptions().get(1).getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", readHeavyScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(readReplicaOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resultType").value("GOOD"));
+	}
+
+	@Test
 	void 시뮬레이션은_중복_선택지를_제거하고_선택_순서를_유지한다() throws Exception {
 		Long firstSelectedOptionId = computeScenario.getOptions().get(1).getId();
 		Long secondSelectedOptionId = computeScenario.getOptions().get(0).getId();
@@ -284,5 +312,21 @@ class ScenarioControllerTests {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
 				.andExpect(jsonPath("$.message").value("Invalid request value: scenarioId"));
+	}
+
+	private Scenario readHeavyScenario() {
+		return Scenario.newScenario(
+				"조회 중심 성능 문제",
+				ScenarioCategory.STORAGE,
+				ScenarioLevel.INTERMEDIATE,
+				"읽기 트래픽이 많은 API의 RDS 부하를 낮춥니다.",
+				"상품 목록과 상세 조회가 급증하면서 RDS CPU와 쿼리 시간이 상승했습니다.",
+				List.of("Client", "ALB", "EC2", "RDS"),
+				List.of(
+						ScenarioOption.newOption("Redis Cache 추가", "반복 조회를 빠르게 처리하고 RDS 부하를 줄입니다.", 2, true, 0),
+						ScenarioOption.newOption("Read Replica 추가", "읽기 부하를 분산합니다.", 2, true, 0),
+						ScenarioOption.newOption("EC2만 증설", "RDS 조회 병목은 그대로 남을 수 있습니다.", 1, false, 1)
+				)
+		);
 	}
 }
