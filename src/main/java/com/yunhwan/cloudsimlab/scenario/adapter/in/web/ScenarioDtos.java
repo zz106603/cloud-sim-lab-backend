@@ -36,6 +36,8 @@ final class ScenarioDtos {
 			ScenarioLevel level,
 			String summary,
 			String description,
+			String problem,
+			List<String> initialArchitecture,
 			List<OptionResponse> options
 	) {
 		static DetailResponse from(Scenario scenario) {
@@ -46,6 +48,8 @@ final class ScenarioDtos {
 					scenario.getLevel(),
 					scenario.getSummary(),
 					scenario.getDescription(),
+					scenario.getDescription(),
+					scenario.getInitialArchitecture(),
 					scenario.getOptions().stream()
 							.map(OptionResponse::from)
 							.toList()
@@ -70,6 +74,7 @@ final class ScenarioDtos {
 			String summary,
 			String detail,
 			List<OptionResponse> selectedOptions,
+			List<String> finalArchitecture,
 			List<RelatedLearningDocumentResponse> relatedLearningDocuments
 	) {
 		static SimulationResponse from(SimulationResult result) {
@@ -83,6 +88,7 @@ final class ScenarioDtos {
 					result.getSelectedOptions().stream()
 							.map(OptionResponse::from)
 							.toList(),
+					result.getFinalArchitecture(),
 					result.getRelatedLearningDocuments().stream()
 							.map(RelatedLearningDocumentResponse::from)
 							.toList()

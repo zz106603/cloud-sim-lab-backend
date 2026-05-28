@@ -8,7 +8,9 @@ import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -17,6 +19,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 
 @Entity
@@ -44,6 +47,12 @@ class JpaScenarioEntity {
 	@Column(nullable = false, columnDefinition = "TEXT")
 	private String description;
 
+	@ElementCollection
+	@CollectionTable(name = "scenario_initial_architecture", joinColumns = @JoinColumn(name = "scenario_id"))
+	@OrderColumn(name = "order_index")
+	@Column(name = "node", nullable = false, length = 120)
+	private List<String> initialArchitecture = new ArrayList<>();
+
 	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
 	@JoinColumn(name = "scenario_id", nullable = false)
 	private List<JpaScenarioOptionEntity> options = new ArrayList<>();
@@ -58,6 +67,7 @@ class JpaScenarioEntity {
 			ScenarioLevel level,
 			String summary,
 			String description,
+			List<String> initialArchitecture,
 			List<JpaScenarioOptionEntity> options
 	) {
 		this.id = id;
@@ -66,6 +76,7 @@ class JpaScenarioEntity {
 		this.level = level;
 		this.summary = summary;
 		this.description = description;
+		this.initialArchitecture.addAll(initialArchitecture);
 		this.options.addAll(options);
 	}
 
@@ -77,6 +88,7 @@ class JpaScenarioEntity {
 				scenario.getLevel(),
 				scenario.getSummary(),
 				scenario.getDescription(),
+				scenario.getInitialArchitecture(),
 				scenario.getOptions().stream()
 						.map(JpaScenarioOptionEntity::from)
 						.toList()
@@ -91,6 +103,7 @@ class JpaScenarioEntity {
 				level,
 				summary,
 				description,
+				initialArchitecture,
 				options.stream()
 						.map(JpaScenarioOptionEntity::toDomain)
 						.toList()

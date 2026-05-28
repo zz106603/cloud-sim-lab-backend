@@ -11,6 +11,7 @@ public class SimulationResult {
 	private final String summary;
 	private final String detail;
 	private final List<ScenarioOption> selectedOptions;
+	private final List<String> finalArchitecture;
 	private final List<RelatedLearningDocument> relatedLearningDocuments;
 
 	public SimulationResult(
@@ -21,6 +22,7 @@ public class SimulationResult {
 			String summary,
 			String detail,
 			List<ScenarioOption> selectedOptions,
+			List<String> finalArchitecture,
 			List<RelatedLearningDocument> relatedLearningDocuments
 	) {
 		this.scenarioId = scenarioId;
@@ -30,6 +32,7 @@ public class SimulationResult {
 		this.summary = summary;
 		this.detail = detail;
 		this.selectedOptions = selectedOptions == null ? List.of() : List.copyOf(selectedOptions);
+		this.finalArchitecture = finalArchitecture == null ? List.of() : List.copyOf(finalArchitecture);
 		this.relatedLearningDocuments = relatedLearningDocuments == null ? List.of() : List.copyOf(relatedLearningDocuments);
 	}
 
@@ -59,6 +62,10 @@ public class SimulationResult {
 
 	public List<ScenarioOption> getSelectedOptions() {
 		return selectedOptions;
+	}
+
+	public List<String> getFinalArchitecture() {
+		return finalArchitecture;
 	}
 
 	public List<RelatedLearningDocument> getRelatedLearningDocuments() {
