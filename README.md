@@ -1,1 +1,278 @@
-# cloud-sim-lab-backend
+# Cloud Sim Lab Backend
+
+Cloud Sim Lab은 백엔드 운영 상황을 시나리오로 학습하는 MVP 프로젝트입니다. 사용자는 학습 문서를 읽고, 운영 문제 상황에서 아키텍처 선택지를 고른 뒤, 규칙 기반 시뮬레이션 결과와 아키텍처 변화를 확인합니다.
+
+이 프로젝트는 AI 추천이 아니라 결정적인 rule-based 평가로 동작합니다. 같은 입력은 항상 같은 결과를 반환하므로, 학습자가 선택지의 trade-off를 반복해서 비교하기 쉽습니다.
+
+## 프로젝트 소개
+
+Cloud Sim Lab은 다음 질문을 다룹니다.
+
+- 단일 Spring Boot 배포는 왜 장애에 취약한가?
+- EC2, RDS, Redis, ALB, Auto Scaling 같은 컴포넌트는 어떤 운영 문제를 해결하는가?
+- 성능, 가용성, 비용, 복잡도, 보안, 일관성은 어떤 trade-off를 만드는가?
+- 아키텍처 선택 결과를 텍스트만이 아니라 다이어그램으로 보면 무엇이 더 명확해지는가?
+
+## 핵심 목표
+
+- 백엔드 운영 상황을 짧은 시나리오로 학습한다.
+- 선택지별 trade-off를 명확히 보여준다.
+- 시뮬레이션 결과를 deterministic하게 평가한다.
+- `initialArchitecture`와 `finalArchitecture`를 제공해 Mermaid 기반 시각화를 가능하게 한다.
+- MVP 범위 안에서 콘텐츠와 API 흐름을 단순하게 유지한다.
+
+## 주요 기능
+
+- 학습 문서 목록/상세 조회
+- 시나리오 목록/상세 조회
+- 선택지 기반 시뮬레이션 실행
+- 결과 유형 반환: `GOOD`, `PARTIAL`, `RISKY`, `WRONG`
+- 관련 학습 문서 추천
+- 초기/최종 아키텍처 컴포넌트 배열 반환
+- local profile 기준 초기 seed 데이터 제공
+
+## 기술 스택
+
+- Java 21
+- Spring Boot 4.0.6
+- Spring Web MVC
+- Spring Data JPA
+- PostgreSQL
+- H2 Test Database
+- Gradle
+- Docker Compose
+
+프론트엔드는 별도 Vite/React 앱에서 API를 호출하고 Mermaid로 아키텍처 배열을 렌더링하는 구조입니다.
+
+## 실행 방법
+
+### 1. PostgreSQL 실행
+
+```bash
+docker compose up -d
+```
+
+### 2. 백엔드 실행
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
+
+기본 API 주소:
+
+```text
+http://localhost:8080/api
+```
+
+local profile에서는 DB가 비어 있을 때 학습 문서와 시나리오 seed가 저장됩니다.
+
+### 3. 테스트
+
+```bash
+./gradlew test
+```
+
+## API 예시
+
+### 학습 문서 목록
+
+```bash
+curl http://localhost:8080/api/docs
+```
+
+응답 예시:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "EC2와 컴퓨팅 용량",
+    "category": "COMPUTE",
+    "level": "BEGINNER",
+    "summary": "Spring Boot 같은 애플리케이션을 EC2에서 실행할 때 용량 선택이 왜 중요한지 이해합니다."
+  }
+]
+```
+
+### 학습 문서 상세
+
+```bash
+curl http://localhost:8080/api/docs/1
+```
+
+응답에는 `content`와 같은 category의 관련 시나리오인 `relatedScenarios`가 포함됩니다.
+
+### 시나리오 목록
+
+```bash
+curl http://localhost:8080/api/scenarios
+```
+
+필터링:
+
+```bash
+curl 'http://localhost:8080/api/scenarios?category=STORAGE&level=INTERMEDIATE'
+```
+
+### 시나리오 상세
+
+```bash
+curl http://localhost:8080/api/scenarios/1
+```
+
+응답 예시:
+
+```json
+{
+  "id": 1,
+  "title": "단일 Spring Boot 배포",
+  "category": "COMPUTE",
+  "level": "BEGINNER",
+  "summary": "단일 EC2에서 실행 중인 Spring Boot 서비스를 안정적으로 운영합니다.",
+  "description": "현재 Spring Boot API가 EC2 한 대에서 실행되고 있습니다. 배포나 장애 때 전체 서비스가 멈출 수 있어 기본 운영 구조를 개선해야 합니다.",
+  "problem": "현재 Spring Boot API가 EC2 한 대에서 실행되고 있습니다. 배포나 장애 때 전체 서비스가 멈출 수 있어 기본 운영 구조를 개선해야 합니다.",
+  "initialArchitecture": ["Client", "EC2", "RDS"],
+  "options": [
+    {
+      "id": 1,
+      "name": "ALB와 Auto Scaling 추가",
+      "description": "비용과 설정 복잡도는 늘지만 트래픽 분산과 장애 우회가 가능해집니다."
+    }
+  ]
+}
+```
+
+## 시뮬레이션 예시
+
+```bash
+curl -X POST http://localhost:8080/api/scenarios/1/simulate \
+  -H 'Content-Type: application/json' \
+  -d '{"selectedOptionIds":[2]}'
+```
+
+응답 예시:
+
+```json
+{
+  "scenarioId": 1,
+  "resultType": "GOOD",
+  "score": 3,
+  "riskScore": 0,
+  "summary": "선택한 구성이 시나리오 요구를 잘 해결합니다.",
+  "detail": "핵심 선택지가 포함되어 성능, 가용성, 보안 중 시나리오의 주요 목표를 직접 개선합니다. 추가 비용과 운영 복잡도는 모니터링해야 합니다.",
+  "selectedOptions": [
+    {
+      "id": 2,
+      "name": "ALB와 Auto Scaling 추가",
+      "description": "비용과 설정 복잡도는 늘지만 트래픽 분산과 장애 우회가 가능해집니다."
+    }
+  ],
+  "finalArchitecture": ["Client", "EC2", "RDS", "ALB", "Auto Scaling"],
+  "relatedLearningDocuments": [
+    {
+      "id": 1,
+      "title": "EC2와 컴퓨팅 용량",
+      "category": "COMPUTE",
+      "level": "BEGINNER",
+      "summary": "Spring Boot 같은 애플리케이션을 EC2에서 실행할 때 용량 선택이 왜 중요한지 이해합니다."
+    }
+  ]
+}
+```
+
+현재 MVP 평가는 단순합니다.
+
+- `core=true` 선택지가 있는 시나리오에서는 핵심 선택지 중 하나를 고르면 `GOOD` 후보가 됩니다.
+- 위험 점수(`riskScore`)가 높으면 `RISKY`가 우선됩니다.
+- 핵심 선택지가 없는 시나리오는 유효한 선택지만으로 `GOOD`이 될 수 있습니다.
+
+## 아키텍처 시각화 예시
+
+백엔드는 다이어그램 자체를 생성하지 않고, 프론트엔드가 렌더링할 수 있는 컴포넌트 배열을 반환합니다.
+
+```json
+{
+  "initialArchitecture": ["Client", "ALB", "EC2", "RDS"],
+  "finalArchitecture": ["Client", "ALB", "EC2", "RDS", "Redis"]
+}
+```
+
+프론트엔드는 이 배열을 Mermaid `flowchart LR` 형태로 변환해 렌더링합니다. 시각화는 복잡한 네트워크 그래프 모델이 아니라, MVP에서 선택 결과를 빠르게 이해하기 위한 보조 표현입니다.
+
+스크린샷이나 GIF가 준비되면 아래 위치에 추가하는 것을 권장합니다.
+
+```text
+docs/images/scenario-detail.png
+docs/images/simulation-result.gif
+```
+
+예시 마크다운:
+
+```markdown
+![시나리오 상세 화면](docs/images/scenario-detail.png)
+![시뮬레이션 결과](docs/images/simulation-result.gif)
+```
+
+## 프로젝트 구조
+
+```text
+src/main/java/com/yunhwan/cloudsimlab
+├── common
+│   ├── config        # CORS 등 공통 설정
+│   └── error         # 공통 예외 응답
+├── learningdocument
+│   ├── adapter       # Web / Persistence adapter
+│   ├── application   # Use case service
+│   └── domain        # LearningDocument domain
+└── scenario
+    ├── adapter       # Web / Persistence adapter
+    ├── application   # Scenario 조회/시뮬레이션 service
+    └── domain        # Scenario, Option, SimulationResult
+```
+
+## MVP 범위
+
+구현된 범위:
+
+- 학습 문서 10개 seed
+- 시나리오 5개 seed
+- 시나리오별 초기 아키텍처 배열
+- 선택지 기반 결과 평가
+- 최종 아키텍처 배열 생성
+- 관련 학습 문서 추천
+- 로컬 개발용 CORS 설정
+
+의도적으로 제외한 범위:
+
+- AI 기반 추천
+- 사용자 진도 저장
+- 고급 rule engine
+- 대안 그룹/필수 그룹 모델링
+- 그래프 형태의 노드/엣지 아키텍처 모델
+- 클라우드 리소스 실배포
+
+## 학습 포인트
+
+- 단일 EC2 배포의 한계
+- ALB와 Auto Scaling의 역할
+- Private subnet과 NAT Gateway의 운영상 의미
+- RDS 장애 대응과 Multi-AZ
+- Read Replica와 Redis Cache의 차이
+- 보안, 비용, 성능, 일관성 사이의 trade-off
+- API 응답을 프론트엔드 시각화 데이터로 연결하는 방식
+
+## 포트폴리오 관점 설명
+
+이 프로젝트는 클라우드 아키텍처를 “정답 암기”가 아니라 운영 상황에서의 선택 문제로 다룹니다. 예를 들어 조회 부하 문제에서 Redis Cache와 Read Replica는 모두 유효할 수 있지만, 각각 일관성, 비용, 구현 복잡도에서 다른 trade-off를 가집니다.
+
+시뮬레이션은 AI가 아니라 명시적인 점수와 핵심 선택지 기준으로 평가합니다. 이는 MVP에서 결과를 예측 가능하게 만들고, 학습자가 선택과 결과의 관계를 쉽게 추적하게 하기 위한 결정입니다.
+
+아키텍처 시각화는 선택 결과를 설명하기 위한 보조 수단입니다. 복잡한 graph modeling 대신 `initialArchitecture`와 `finalArchitecture` 배열을 제공해, 프론트엔드에서 Mermaid로 빠르게 렌더링할 수 있게 했습니다.
+
+## 향후 확장 방향
+
+- 프론트엔드/백엔드 응답 DTO 계약 정리
+- 선택지별 효과 지표(`performance`, `availability`, `cost` 등) 응답 확장
+- 시나리오별 관련 문서 ID 명시화
+- 아키텍처 노드/엣지 모델 도입 검토
+- 사용자별 풀이 이력 저장
