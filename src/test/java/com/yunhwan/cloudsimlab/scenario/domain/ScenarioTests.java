@@ -10,11 +10,11 @@ class ScenarioTests {
 	void constructorTreatsNullOptionsAsEmptyList() {
 		Scenario scenario = new Scenario(
 				1L,
-				"Scale a web service",
+				"웹 서비스 확장",
 				ScenarioCategory.COMPUTE,
 				ScenarioLevel.BEGINNER,
-				"Choose compute capacity.",
-				"Compare compute choices before traffic increases.",
+				"컴퓨팅 용량을 선택합니다.",
+				"트래픽이 늘어나기 전에 EC2 용량을 비교해야 합니다.",
 				null
 		);
 
