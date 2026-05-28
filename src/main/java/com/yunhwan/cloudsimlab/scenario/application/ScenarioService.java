@@ -99,11 +99,10 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				.anyMatch(option -> option.getScore() > 0 || option.isCore());
 		boolean hasCoreOptions = scenario.getOptions().stream()
 				.anyMatch(ScenarioOption::isCore);
-		boolean includesAllCoreOptions = scenario.getOptions().stream()
-				.filter(ScenarioOption::isCore)
-				.allMatch(option -> selectedIds.contains(option.getId()));
+		boolean includesCoreOption = selectedOptions.stream()
+				.anyMatch(ScenarioOption::isCore);
 
-		boolean satisfiesGoodCriteria = hasCoreOptions ? includesAllCoreOptions : hasUsefulOption;
+		boolean satisfiesGoodCriteria = hasCoreOptions ? includesCoreOption : hasUsefulOption;
 		SimulationResultType resultType = determineResultType(hasUsefulOption, satisfiesGoodCriteria, riskScore);
 		return new SimulationResult(
 				scenario.getId(),
