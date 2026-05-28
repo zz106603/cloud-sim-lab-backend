@@ -3,7 +3,9 @@ package com.yunhwan.cloudsimlab.scenario;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -155,11 +159,20 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.detail").exists())
 				.andExpect(jsonPath("$.selectedOptions", hasSize(1)))
 				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId))
-				.andExpect(jsonPath("$.finalArchitecture", hasSize(4)))
-				.andExpect(jsonPath("$.finalArchitecture[3]").value("큰 EC2 인스턴스로 변경"))
+				.andExpect(jsonPath("$.finalArchitecture", hasSize(3)))
+				.andExpect(jsonPath("$.finalArchitecture[1]").value("EC2"))
 				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].title").value("Virtual machines and compute capacity"));
+	}
+
+	@Test
+	void CORS_허용_origin은_설정값으로_동작한다() throws Exception {
+		mockMvc.perform(options("/api/scenarios")
+						.header(HttpHeaders.ORIGIN, "http://localhost:5173")
+						.header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.GET.name()))
+				.andExpect(status().isOk())
+				.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"));
 	}
 
 	@Test

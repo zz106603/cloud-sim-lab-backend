@@ -28,6 +28,24 @@ import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
 @Transactional(readOnly = true)
 public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseCase {
 
+	private static final List<String> ARCHITECTURE_COMPONENT_NAMES = List.of(
+			"Client",
+			"EC2",
+			"RDS",
+			"Redis",
+			"ALB",
+			"Load Balancer",
+			"Auto Scaling",
+			"NAT Gateway",
+			"Security Group",
+			"Read Replica",
+			"Multi-AZ",
+			"Internet Gateway",
+			"Public subnet",
+			"Private subnet",
+			"Application server"
+	);
+
 	private final ScenarioQueryPort queryPort;
 	private final LearningDocumentQueryPort learningDocumentQueryPort;
 
@@ -103,9 +121,16 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 	private List<String> finalArchitectureFor(Scenario scenario, List<ScenarioOption> selectedOptions) {
 		return java.util.stream.Stream.concat(
 						scenario.getInitialArchitecture().stream(),
-						selectedOptions.stream().map(ScenarioOption::getName)
+						selectedOptions.stream()
+								.flatMap(option -> architectureComponentsIn(option.getName()).stream())
 				)
 				.distinct()
+				.toList();
+	}
+
+	private List<String> architectureComponentsIn(String text) {
+		return ARCHITECTURE_COMPONENT_NAMES.stream()
+				.filter(text::contains)
 				.toList();
 	}
 
