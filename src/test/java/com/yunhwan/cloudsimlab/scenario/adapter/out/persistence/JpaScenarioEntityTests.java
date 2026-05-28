@@ -17,17 +17,19 @@ class JpaScenarioEntityTests {
 	void fromPreservesScenarioAndOptionIds() {
 		Scenario scenario = new Scenario(
 				1L,
-				"Scale a web service",
+				"웹 서비스 확장",
 				ScenarioCategory.COMPUTE,
 				ScenarioLevel.BEGINNER,
-				"Choose compute capacity.",
-				"Compare compute choices before traffic increases.",
-				List.of(new ScenarioOption(10L, "Small instance", "Lower cost with limited capacity."))
+				"컴퓨팅 용량을 선택합니다.",
+				"트래픽이 늘어나기 전에 EC2 용량을 비교해야 합니다.",
+				List.of("Client", "EC2", "RDS"),
+				List.of(new ScenarioOption(10L, "작은 EC2 인스턴스 유지", "비용은 낮지만 용량이 제한적입니다."))
 		);
 
 		Scenario mapped = JpaScenarioEntity.from(scenario).toDomain();
 
 		assertThat(mapped.getId()).isEqualTo(1L);
+		assertThat(mapped.getInitialArchitecture()).containsExactly("Client", "EC2", "RDS");
 		assertThat(mapped.getOptions()).extracting(ScenarioOption::getId).containsExactly(10L);
 	}
 }
