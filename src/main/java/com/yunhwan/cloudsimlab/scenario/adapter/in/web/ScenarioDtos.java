@@ -41,14 +41,15 @@ final class ScenarioDtos {
 			List<OptionResponse> options
 	) {
 		static DetailResponse from(Scenario scenario) {
+			String problem = scenario.getDescription();
 			return new DetailResponse(
 					scenario.getId(),
 					scenario.getTitle(),
 					scenario.getCategory(),
 					scenario.getLevel(),
 					scenario.getSummary(),
-					scenario.getDescription(),
-					scenario.getDescription(),
+					problem,
+					problem,
 					scenario.getInitialArchitecture(),
 					scenario.getOptions().stream()
 							.map(OptionResponse::from)
