@@ -190,10 +190,10 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 
 	private String detailFor(SimulationResultType resultType) {
 		return switch (resultType) {
-			case GOOD -> "핵심 선택지가 포함되어 있고 큰 위험 요소가 없습니다.";
-			case PARTIAL -> "유효한 선택은 포함됐지만 시나리오에 필요한 핵심 선택지가 부족합니다.";
-			case RISKY -> "문제 해결에는 도움이 되지만 선택한 고위험 옵션이 구조를 취약하게 만들 수 있습니다.";
-			case WRONG -> "시나리오 목표를 직접 개선하는 선택지를 고르세요.";
+			case GOOD -> "핵심 선택지가 포함되어 성능, 가용성, 보안 중 시나리오의 주요 목표를 직접 개선합니다. 추가 비용과 운영 복잡도는 모니터링해야 합니다.";
+			case PARTIAL -> "일부 효과는 있지만 핵심 병목이나 장애 지점이 남아 있습니다. 비용 대비 개선 범위를 다시 확인하세요.";
+			case RISKY -> "문제 해결에는 도움이 되지만 보안 노출, 단일 장애 지점, 일관성 문제 같은 위험이 함께 커질 수 있습니다.";
+			case WRONG -> "현재 선택은 시나리오의 주요 원인을 직접 줄이지 못합니다. 병목이 compute, network, storage, security 중 어디인지 먼저 좁히세요.";
 		};
 	}
 }
