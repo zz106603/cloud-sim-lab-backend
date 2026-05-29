@@ -26,14 +26,14 @@ class LearningDocumentSeed {
 					DocumentCategory.COMPUTE,
 					DocumentLevel.BEGINNER,
 					"EC2 용량 선택이 성능, 비용, 장애 영향에 어떤 판단 기준을 만드는지 이해합니다.",
-					"EC2는 Spring Boot 같은 애플리케이션이 실제 요청을 처리하는 컴퓨팅 자원입니다. Client 요청은 EC2의 애플리케이션으로 들어오고, 애플리케이션은 필요한 데이터를 RDS나 Redis 같은 의존 리소스에서 조회합니다. CPU 사용률, 메모리 사용량, 응답 시간, 스레드 대기 시간이 함께 높아지면 EC2 용량이 병목일 가능성이 큽니다. 이때 인스턴스 사양을 키우면 빠르게 완화할 수 있지만 비용이 증가하고 단일 장애 지점은 그대로 남습니다. 트래픽 변동이 크거나 배포 중단까지 줄여야 한다면 ALB와 Auto Scaling을 함께 검토해야 합니다."
+					"EC2는 Spring Boot 같은 애플리케이션이 실제 요청을 처리하는 컴퓨팅 자원입니다. Client 요청은 EC2의 애플리케이션으로 들어오고, 애플리케이션은 필요한 데이터를 RDS나 Redis 같은 의존 리소스에서 조회합니다. CPU 사용률, 메모리 사용량, 응답 시간, 스레드 대기 시간이 함께 높아지면 EC2의 컴퓨팅 자원(용량)이 병목 지점일 가능성이 큽니다. 이때 인스턴스 사양을 키우면 빠르게 완화할 수 있지만 비용이 증가하고 단일 장애 지점은 그대로 남습니다. 트래픽 변동이 크거나 배포 중단까지 줄여야 한다면 ALB와 Auto Scaling을 함께 검토해야 합니다."
 			));
 			seedPort.save(LearningDocument.newDocument(
 					"Private subnet과 애플리케이션 서버",
 					DocumentCategory.NETWORK,
 					DocumentLevel.BEGINNER,
 					"애플리케이션 서버를 인터넷에 직접 노출하지 않는 네트워크 판단 기준을 이해합니다.",
-					"Private subnet은 외부 사용자가 직접 접근하면 안 되는 EC2나 RDS를 배치하는 네트워크 영역입니다. 운영 요청 흐름은 Client가 Public subnet의 ALB에 접근하고, ALB가 Private subnet의 EC2로 트래픽을 전달하는 방식이 기본입니다. 이렇게 구성하면 애플리케이션 서버의 인바운드 경로를 ALB로 제한할 수 있어 보안 위험을 줄입니다. 다만 Private subnet의 EC2가 외부 API 호출, 패키지 다운로드, 보안 업데이트를 수행해야 한다면 NAT Gateway나 별도 아웃바운드 경로가 필요합니다. 라우팅과 Security Group을 잘못 조합하면 서버가 노출되거나 반대로 배포와 외부 연동이 실패할 수 있습니다."
+					"Private subnet은 외부 사용자가 직접 접근하면 안 되는 EC2나 RDS를 배치하는 네트워크 영역입니다. 운영 요청 흐름은 Client가 Public subnet의 ALB에 접근하고, ALB가 Private subnet의 EC2로 트래픽을 전달하는 방식이 기본입니다. 이렇게 구성하면 애플리케이션 서버의 인바운드 경로를 ALB로 제한할 수 있어 보안 위험을 줄입니다. 다만 Private subnet의 EC2가 외부 API 호출, 패키지 다운로드, 보안 업데이트를 수행해야 한다면 NAT Gateway나 별도 아웃바운드 경로가 필요합니다. 서브넷 라우팅 테이블이나 Security Group 설정을 잘못하면 필요한 통신이 막혀 배포와 외부 연동이 실패할 수 있습니다."
 			));
 			seedPort.save(LearningDocument.newDocument(
 					"ALB와 트래픽 분산",
