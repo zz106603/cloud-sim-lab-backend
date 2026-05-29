@@ -213,7 +213,12 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 	) {
 		String goal = scenario.getSummary();
 		return switch (resultType) {
-			case GOOD -> "시나리오 목표인 '" + goal + "'에 맞는 핵심 선택지가 포함되어 현재 문제의 주요 원인을 직접 줄입니다.";
+			case GOOD -> {
+				String reason = hasCoreOptions && includesCoreOption
+						? "핵심 선택지가 포함되어 현재 문제의 주요 원인을 직접 줄입니다."
+						: "유효한 선택지가 시나리오 목표에 맞게 현재 문제를 줄입니다.";
+				yield "시나리오 목표인 '" + goal + "'에 맞습니다. " + reason;
+			}
 			case PARTIAL -> {
 				String reason = hasCoreOptions && !includesCoreOption
 						? "시나리오의 핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다."
