@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,7 +111,7 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				score,
 				riskScore,
 				summaryFor(resultType),
-				detailFor(resultType),
+				detailFor(scenario, selectedOptions, resultType, hasCoreOptions, includesCoreOption),
 				selectedOptions,
 				finalArchitectureFor(scenario, selectedOptions),
 				relatedLearningDocumentsFor(scenario)
@@ -187,12 +188,87 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		};
 	}
 
-	private String detailFor(SimulationResultType resultType) {
+	private String detailFor(
+			Scenario scenario,
+			List<ScenarioOption> selectedOptions,
+			SimulationResultType resultType,
+			boolean hasCoreOptions,
+			boolean includesCoreOption
+	) {
+		return Stream.of(
+						resultReasonFor(scenario, resultType, hasCoreOptions, includesCoreOption),
+						selectedOptionFeedbackFor(selectedOptions),
+						tradeOffFeedbackFor(selectedOptions),
+						nextStepFor(resultType)
+				)
+				.filter(text -> !text.isBlank())
+				.collect(Collectors.joining(" "));
+	}
+
+	private String resultReasonFor(
+			Scenario scenario,
+			SimulationResultType resultType,
+			boolean hasCoreOptions,
+			boolean includesCoreOption
+	) {
+		String goal = scenario.getSummary();
 		return switch (resultType) {
-			case GOOD -> "핵심 선택지가 포함되어 성능, 가용성, 보안 중 시나리오의 주요 목표를 직접 개선합니다. 추가 비용과 운영 복잡도는 모니터링해야 합니다.";
-			case PARTIAL -> "일부 효과는 있지만 핵심 병목이나 장애 지점이 남아 있습니다. 비용 대비 개선 범위를 다시 확인하세요.";
-			case RISKY -> "문제 해결에는 도움이 되지만 보안 노출, 단일 장애 지점, 일관성 문제 같은 위험이 함께 커질 수 있습니다.";
-			case WRONG -> "현재 선택은 시나리오의 주요 원인을 직접 줄이지 못합니다. 병목이 compute, network, storage, security 중 어디인지 먼저 좁히세요.";
+			case GOOD -> "시나리오 목표인 '" + goal + "'에 맞는 핵심 선택지가 포함되어 현재 문제의 주요 원인을 직접 줄입니다.";
+			case PARTIAL -> {
+				String reason = hasCoreOptions && !includesCoreOption
+						? "시나리오의 핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다."
+						: "선택지가 일부 도움이 되지만 목표를 충분히 해결하지 못합니다.";
+				yield "시나리오 목표인 '" + goal + "'에는 부분적으로만 맞습니다. " + reason;
+			}
+			case RISKY -> "시나리오 목표인 '" + goal + "'에 일부 기여하더라도 선택한 구성의 위험 점수가 높아 부작용을 먼저 검토해야 합니다.";
+			case WRONG -> "시나리오 목표인 '" + goal + "'의 원인을 직접 줄이는 선택지가 포함되지 않았습니다.";
+		};
+	}
+
+	private String selectedOptionFeedbackFor(List<ScenarioOption> selectedOptions) {
+		return selectedOptions.stream()
+				.map(option -> option.getName() + subjectParticleFor(option.getName()) + " " + option.getDescription())
+				.collect(Collectors.joining(" ", "선택지별 판단: ", ""));
+	}
+
+	private String subjectParticleFor(String text) {
+		if (text == null || text.isBlank()) {
+			return "은";
+		}
+		char lastCharacter = text.charAt(text.length() - 1);
+		if (lastCharacter < '가' || lastCharacter > '힣') {
+			return "은";
+		}
+		return (lastCharacter - '가') % 28 == 0 ? "는" : "은";
+	}
+
+	private String tradeOffFeedbackFor(List<ScenarioOption> selectedOptions) {
+		boolean includesCoreOption = selectedOptions.stream()
+				.anyMatch(ScenarioOption::isCore);
+		boolean includesRiskOption = selectedOptions.stream()
+				.anyMatch(option -> option.getRiskScore() > 0);
+		boolean includesNoScoreOption = selectedOptions.stream()
+				.anyMatch(option -> option.getScore() <= 0);
+
+		List<String> feedback = Stream.of(
+						includesCoreOption ? "핵심 선택지는 성능, 가용성, 보안 중 현재 시나리오의 주요 목표를 직접 개선합니다." : "",
+						includesRiskOption ? "위험 점수가 있는 선택지는 보안 노출, 단일 장애 지점, 일관성 문제, 비용 낭비 같은 운영 부담을 함께 만들 수 있습니다." : "",
+						includesNoScoreOption ? "점수가 없는 선택지는 일반적으로 유효한 기술이어도 현재 문제 원인에는 직접 맞지 않을 수 있습니다." : ""
+				)
+				.filter(text -> !text.isBlank())
+				.toList();
+		if (feedback.isEmpty()) {
+			return "추가 비용과 운영 복잡도는 선택한 구성의 효과와 함께 비교해야 합니다.";
+		}
+		return String.join(" ", feedback);
+	}
+
+	private String nextStepFor(SimulationResultType resultType) {
+		return switch (resultType) {
+			case GOOD -> "다음으로 비용, 확장 지연, 장애 시 우회 흐름을 함께 확인하세요.";
+			case PARTIAL -> "남은 병목이 compute, network, storage, security 중 어디에 있는지 다시 좁히세요.";
+			case RISKY -> "적용 전에 위험을 줄일 보완 선택지나 운영 절차가 필요한지 확인하세요.";
+			case WRONG -> "먼저 시나리오의 병목과 장애 지점을 다시 식별한 뒤 그 원인을 직접 줄이는 선택지를 고르세요.";
 		};
 	}
 }
