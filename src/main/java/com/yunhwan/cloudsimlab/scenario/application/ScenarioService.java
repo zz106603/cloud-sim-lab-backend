@@ -242,7 +242,7 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		}
 		char lastCharacter = text.charAt(text.length() - 1);
 		if (lastCharacter < '가' || lastCharacter > '힣') {
-			return "은";
+			return "는";
 		}
 		return (lastCharacter - '가') % 28 == 0 ? "는" : "은";
 	}
