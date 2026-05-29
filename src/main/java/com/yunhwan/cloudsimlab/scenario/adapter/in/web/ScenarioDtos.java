@@ -4,6 +4,10 @@ import java.util.List;
 
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
+import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureEdge;
+import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraph;
+import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraphs;
+import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureNode;
 import com.yunhwan.cloudsimlab.scenario.domain.RelatedLearningDocument;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
@@ -35,11 +39,12 @@ final class ScenarioDtos {
 			ScenarioCategory category,
 			ScenarioLevel level,
 			String summary,
-			String description,
-			String problem,
-			List<String> initialArchitecture,
-			List<OptionResponse> options
-	) {
+				String description,
+				String problem,
+				List<String> initialArchitecture,
+				ArchitectureGraphResponse initialArchitectureGraph,
+				List<OptionResponse> options
+		) {
 		static DetailResponse from(Scenario scenario) {
 			String problem = scenario.getDescription();
 			return new DetailResponse(
@@ -48,12 +53,13 @@ final class ScenarioDtos {
 					scenario.getCategory(),
 					scenario.getLevel(),
 					scenario.getSummary(),
-					problem,
-					problem,
-					scenario.getInitialArchitecture(),
-					scenario.getOptions().stream()
-							.map(OptionResponse::from)
-							.toList()
+						problem,
+						problem,
+						scenario.getInitialArchitecture(),
+						ArchitectureGraphResponse.from(ArchitectureGraphs.initialFor(scenario)),
+						scenario.getOptions().stream()
+								.map(OptionResponse::from)
+								.toList()
 			);
 		}
 	}
@@ -73,11 +79,12 @@ final class ScenarioDtos {
 			int score,
 			int riskScore,
 			String summary,
-			String detail,
-			List<OptionResponse> selectedOptions,
-			List<String> finalArchitecture,
-			List<RelatedLearningDocumentResponse> relatedLearningDocuments
-	) {
+				String detail,
+				List<OptionResponse> selectedOptions,
+				List<String> finalArchitecture,
+				ArchitectureGraphResponse finalArchitectureGraph,
+				List<RelatedLearningDocumentResponse> relatedLearningDocuments
+		) {
 		static SimulationResponse from(SimulationResult result) {
 			return new SimulationResponse(
 					result.getScenarioId(),
@@ -87,13 +94,39 @@ final class ScenarioDtos {
 					result.getSummary(),
 					result.getDetail(),
 					result.getSelectedOptions().stream()
-							.map(OptionResponse::from)
+								.map(OptionResponse::from)
+								.toList(),
+						result.getFinalArchitecture(),
+						ArchitectureGraphResponse.from(result.getFinalArchitectureGraph()),
+						result.getRelatedLearningDocuments().stream()
+								.map(RelatedLearningDocumentResponse::from)
+								.toList()
+				);
+			}
+		}
+
+	record ArchitectureGraphResponse(List<ArchitectureNodeResponse> nodes, List<ArchitectureEdgeResponse> edges) {
+		static ArchitectureGraphResponse from(ArchitectureGraph graph) {
+			return new ArchitectureGraphResponse(
+					graph.nodes().stream()
+							.map(ArchitectureNodeResponse::from)
 							.toList(),
-					result.getFinalArchitecture(),
-					result.getRelatedLearningDocuments().stream()
-							.map(RelatedLearningDocumentResponse::from)
+					graph.edges().stream()
+							.map(ArchitectureEdgeResponse::from)
 							.toList()
 			);
+		}
+	}
+
+	record ArchitectureNodeResponse(String id, String label, String type, String description) {
+		static ArchitectureNodeResponse from(ArchitectureNode node) {
+			return new ArchitectureNodeResponse(node.id(), node.label(), node.type(), node.description());
+		}
+	}
+
+	record ArchitectureEdgeResponse(String source, String target, String label) {
+		static ArchitectureEdgeResponse from(ArchitectureEdge edge) {
+			return new ArchitectureEdgeResponse(edge.source(), edge.target(), edge.label());
 		}
 	}
 

@@ -122,6 +122,12 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.problem").value("트래픽이 늘어나기 전에 EC2 용량을 비교해야 합니다."))
 				.andExpect(jsonPath("$.initialArchitecture", hasSize(3)))
 				.andExpect(jsonPath("$.initialArchitecture[0]").value("Client"))
+				.andExpect(jsonPath("$.initialArchitectureGraph.nodes", hasSize(3)))
+				.andExpect(jsonPath("$.initialArchitectureGraph.nodes[0].id").value("client"))
+				.andExpect(jsonPath("$.initialArchitectureGraph.nodes[1].type").value("EC2"))
+				.andExpect(jsonPath("$.initialArchitectureGraph.edges", hasSize(2)))
+				.andExpect(jsonPath("$.initialArchitectureGraph.edges[0].source").value("client"))
+				.andExpect(jsonPath("$.initialArchitectureGraph.edges[0].target").value("ec2"))
 				.andExpect(jsonPath("$.options", hasSize(2)))
 				.andExpect(jsonPath("$.options[0].name").value("작은 EC2 인스턴스 유지"))
 				.andExpect(jsonPath("$.options[0].description").value("비용은 낮지만 용량이 제한적입니다."));
@@ -277,7 +283,10 @@ class ScenarioControllerTests {
 								""".formatted(redisOptionId)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.resultType").value("GOOD"))
-				.andExpect(jsonPath("$.detail", containsString("Redis Cache 추가는 반복 조회를 빠르게 처리하고 RDS 부하를 줄입니다.")));
+				.andExpect(jsonPath("$.detail", containsString("Redis Cache 추가는 반복 조회를 빠르게 처리하고 RDS 부하를 줄입니다.")))
+				.andExpect(jsonPath("$.finalArchitectureGraph.nodes[?(@.id == 'redis')]", hasSize(1)))
+				.andExpect(jsonPath("$.finalArchitectureGraph.nodes[?(@.type == 'REDIS')]", hasSize(1)))
+				.andExpect(jsonPath("$.finalArchitectureGraph.edges[?(@.source == 'ec2' && @.target == 'redis')]", hasSize(1)));
 	}
 
 	@Test
