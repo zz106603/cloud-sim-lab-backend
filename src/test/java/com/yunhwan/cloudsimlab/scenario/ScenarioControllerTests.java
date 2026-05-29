@@ -197,10 +197,10 @@ class ScenarioControllerTests {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"selectedOptionIds":[%d]}
-								""".formatted(optionId)))
+				""".formatted(optionId)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.resultType").value("GOOD"))
-				.andExpect(jsonPath("$.detail", containsString("핵심 선택지가 포함되어 현재 문제의 주요 원인을 직접 줄입니다.")));
+				.andExpect(jsonPath("$.detail", containsString("유효한 선택지가 시나리오 목표에 맞게 현재 문제를 줄입니다.")));
 	}
 
 	@Test
