@@ -404,6 +404,7 @@ EC2
 | level | 난이도 |
 | problem | 문제 상황 |
 | initialArchitecture | 초기 아키텍처 |
+| initialArchitectureGraph | 초기 아키텍처 node/edge 구조 |
 | options | 선택지 목록 |
 | recommendedOptionIds | 추천 선택지 |
 | relatedDocumentIds | 관련 문서 |
@@ -436,6 +437,7 @@ EC2
 | summary | 결과 요약 |
 | detailFeedback | 상세 피드백 |
 | finalArchitecture | 변경 후 아키텍처 |
+| finalArchitectureGraph | 변경 후 아키텍처 node/edge 구조 |
 | relatedDocumentIds | 추천 학습 문서 |
 
 ---

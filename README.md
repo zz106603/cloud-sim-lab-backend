@@ -18,7 +18,7 @@ Cloud Sim Lab은 다음 질문을 다룹니다.
 - 백엔드 운영 상황을 짧은 시나리오로 학습한다.
 - 선택지별 trade-off를 명확히 보여준다.
 - 시뮬레이션 결과를 deterministic하게 평가한다.
-- `initialArchitecture`와 `finalArchitecture`를 제공해 Mermaid 기반 시각화를 가능하게 한다.
+- `initialArchitecture`/`finalArchitecture`와 graph 응답을 제공해 아키텍처 시각화를 가능하게 한다.
 - MVP 범위 안에서 콘텐츠와 API 흐름을 단순하게 유지한다.
 
 ## 주요 기능
@@ -28,7 +28,7 @@ Cloud Sim Lab은 다음 질문을 다룹니다.
 - 선택지 기반 시뮬레이션 실행
 - 결과 유형 반환: `GOOD`, `PARTIAL`, `RISKY`, `WRONG`
 - 관련 학습 문서 추천
-- 초기/최종 아키텍처 컴포넌트 배열 반환
+- 초기/최종 아키텍처 컴포넌트 배열과 최소 graph 응답 반환
 - local profile 기준 초기 seed 데이터 제공
 
 ## 기술 스택
@@ -132,6 +132,17 @@ curl http://localhost:8080/api/scenarios/1
   "description": "현재 Spring Boot API가 EC2 한 대에서 실행되고 있습니다. 배포나 장애 때 전체 서비스가 멈출 수 있어 기본 운영 구조를 개선해야 합니다.",
   "problem": "현재 Spring Boot API가 EC2 한 대에서 실행되고 있습니다. 배포나 장애 때 전체 서비스가 멈출 수 있어 기본 운영 구조를 개선해야 합니다.",
   "initialArchitecture": ["Client", "EC2", "RDS"],
+  "initialArchitectureGraph": {
+    "nodes": [
+      { "id": "client", "label": "Client", "type": "CLIENT", "description": "사용자 요청이 시작되는 외부 클라이언트입니다." },
+      { "id": "ec2", "label": "EC2", "type": "EC2", "description": "애플리케이션 요청을 처리하는 컴퓨팅 리소스입니다." },
+      { "id": "rds", "label": "RDS", "type": "RDS", "description": "애플리케이션의 주요 영속 데이터를 저장하는 데이터베이스입니다." }
+    ],
+    "edges": [
+      { "source": "client", "target": "ec2", "label": "요청" },
+      { "source": "ec2", "target": "rds", "label": "DB 접근" }
+    ]
+  },
   "options": [
     {
       "id": 1,
@@ -168,6 +179,17 @@ curl -X POST http://localhost:8080/api/scenarios/1/simulate \
     }
   ],
   "finalArchitecture": ["Client", "EC2", "RDS", "ALB", "Auto Scaling"],
+  "finalArchitectureGraph": {
+    "nodes": [
+      { "id": "client", "label": "Client", "type": "CLIENT", "description": "사용자 요청이 시작되는 외부 클라이언트입니다." },
+      { "id": "alb", "label": "ALB", "type": "ALB", "description": "요청을 정상 target으로 분산하고 장애 인스턴스를 우회하는 진입점입니다." },
+      { "id": "auto-scaling", "label": "Auto Scaling", "type": "AUTO_SCALING", "description": "부하나 장애 상황에 맞춰 애플리케이션 인스턴스 수를 조정합니다." }
+    ],
+    "edges": [
+      { "source": "client", "target": "alb", "label": "HTTP 요청" },
+      { "source": "alb", "target": "auto-scaling", "label": "정상 target 분산" }
+    ]
+  },
   "relatedLearningDocuments": [
     {
       "id": 1,
@@ -190,16 +212,30 @@ curl -X POST http://localhost:8080/api/scenarios/1/simulate \
 
 ## 아키텍처 시각화 예시
 
-백엔드는 다이어그램 자체를 생성하지 않고, 프론트엔드가 렌더링할 수 있는 컴포넌트 배열을 반환합니다.
+백엔드는 기존 호환성을 위한 컴포넌트 배열과 React Flow 같은 시각화에 사용할 수 있는 최소 graph 응답을 함께 반환합니다.
 
 ```json
 {
   "initialArchitecture": ["Client", "ALB", "EC2", "RDS"],
-  "finalArchitecture": ["Client", "ALB", "EC2", "RDS", "Redis"]
+  "initialArchitectureGraph": {
+    "nodes": [
+      { "id": "client", "label": "Client", "type": "CLIENT", "description": "사용자 요청이 시작되는 외부 클라이언트입니다." }
+    ],
+    "edges": []
+  },
+  "finalArchitecture": ["Client", "ALB", "EC2", "RDS", "Redis"],
+  "finalArchitectureGraph": {
+    "nodes": [
+      { "id": "redis", "label": "Redis", "type": "REDIS", "description": "반복 조회를 빠르게 처리하고 DB 부하를 줄이는 캐시 계층입니다." }
+    ],
+    "edges": [
+      { "source": "ec2", "target": "redis", "label": "캐시 조회" }
+    ]
+  }
 }
 ```
 
-프론트엔드는 이 배열을 Mermaid `flowchart LR` 형태로 변환해 렌더링합니다. 시각화는 복잡한 네트워크 그래프 모델이 아니라, MVP에서 선택 결과를 빠르게 이해하기 위한 보조 표현입니다.
+프론트엔드는 전환 중에는 기존 배열을 Mermaid `flowchart LR` 형태로 사용할 수 있고, graph 응답이 있으면 node/edge 기반으로 렌더링할 수 있습니다. graph 응답은 범용 네트워크 모델이 아니라 학습용 시각화를 위한 최소 구조입니다.
 
 스크린샷이나 GIF가 준비되면 아래 위치에 추가하는 것을 권장합니다.
 
