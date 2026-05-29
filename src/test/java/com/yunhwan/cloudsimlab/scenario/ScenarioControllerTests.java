@@ -296,6 +296,30 @@ class ScenarioControllerTests {
 	}
 
 	@Test
+	void 영문으로_끝나는_선택지명은_자연스러운_조사로_피드백을_반환한다() throws Exception {
+		Scenario redisScenario = seedPort.save(Scenario.newScenario(
+				"Redis 캐시 적용",
+				ScenarioCategory.STORAGE,
+				ScenarioLevel.BEGINNER,
+				"반복 조회 응답 시간을 줄입니다.",
+				"반복 조회가 많아 캐시 도입을 검토합니다.",
+				List.of("Client", "EC2", "RDS"),
+				List.of(
+						ScenarioOption.newOption("Redis", "반복 조회를 캐시로 처리합니다.", 2, true, 0)
+				)
+		));
+		Long redisOptionId = redisScenario.getOptions().getFirst().getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", redisScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(redisOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.detail", containsString("Redis는 반복 조회를 캐시로 처리합니다.")));
+	}
+
+	@Test
 	void 시뮬레이션은_중복_선택지를_제거하고_선택_순서를_유지한다() throws Exception {
 		Long firstSelectedOptionId = computeScenario.getOptions().get(1).getId();
 		Long secondSelectedOptionId = computeScenario.getOptions().get(0).getId();
