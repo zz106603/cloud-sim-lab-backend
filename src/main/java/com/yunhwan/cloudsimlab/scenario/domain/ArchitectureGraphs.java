@@ -32,62 +32,73 @@ public final class ArchitectureGraphs {
 		}
 
 		for (ScenarioOption option : selectedOptions) {
-			applyOption(nodesById, edges, option.getName());
+			applyOption(nodesById, edges, scenario.getTitle(), option.getName());
 		}
 		return new ArchitectureGraph(new ArrayList<>(nodesById.values()), edges);
 	}
 
-	private static void applyOption(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges, String optionName) {
-		if (optionName.contains("ALB") && optionName.contains("Auto Scaling")) {
-			addNode(nodesById, "ALB");
-			addNode(nodesById, "Auto Scaling");
-			addNode(nodesById, "EC2");
-			addEdge(edges, "Client", "ALB", "HTTP 요청");
-			addEdge(edges, "ALB", "Auto Scaling", "정상 target 분산");
-			addEdge(edges, "Auto Scaling", "EC2", "인스턴스 확장");
-			return;
+	private static void applyOption(
+			Map<String, ArchitectureNode> nodesById,
+			List<ArchitectureEdge> edges,
+			String scenarioTitle,
+			String optionName
+	) {
+		switch (scenarioTitle + "::" + optionName) {
+			case "단일 Spring Boot 배포::ALB와 Auto Scaling 추가",
+					"트래픽 급증 대응::Auto Scaling 추가" -> addAutoScalingPath(nodesById, edges);
+			case "Private subnet 애플리케이션 서버::ALB 앞단과 Private subnet EC2로 분리" -> addPrivateAlbPath(nodesById, edges);
+			case "Private subnet 애플리케이션 서버::Private subnet EC2와 NAT Gateway 구성" -> addNatGatewayPath(nodesById, edges);
+			case "RDS 장애 대응::Multi-AZ 활성화" -> addMultiAzPath(nodesById, edges);
+			case "RDS 장애 대응::Read Replica만 추가",
+					"조회 중심 성능 문제::Read Replica 추가" -> addReadReplicaPath(nodesById, edges);
+			case "조회 중심 성능 문제::Redis Cache 추가" -> addRedisPath(nodesById, edges);
+			default -> {
+			}
 		}
-		if (optionName.contains("ALB") && optionName.contains("Private subnet")) {
-			addNode(nodesById, "ALB");
-			addNode(nodesById, "Private subnet");
-			addNode(nodesById, "EC2");
-			addEdge(edges, "Client", "ALB", "외부 진입점");
-			addEdge(edges, "ALB", "Private subnet", "내부 전달");
-			addEdge(edges, "Private subnet", "EC2", "애플리케이션 요청");
-			return;
-		}
-		if (optionName.contains("NAT Gateway")) {
-			addNode(nodesById, "Private subnet");
-			addNode(nodesById, "NAT Gateway");
-			addNode(nodesById, "Internet Gateway");
-			addEdge(edges, "Private subnet", "NAT Gateway", "아웃바운드");
-			addEdge(edges, "NAT Gateway", "Internet Gateway", "인터넷 접근");
-			return;
-		}
-		if (optionName.contains("Auto Scaling")) {
-			addNode(nodesById, "Auto Scaling");
-			addNode(nodesById, "EC2");
-			addEdge(edges, "ALB", "Auto Scaling", "트래픽 분산");
-			addEdge(edges, "Auto Scaling", "EC2", "인스턴스 확장");
-			return;
-		}
-		if (optionName.contains("Multi-AZ")) {
-			addNode(nodesById, "RDS");
-			addNode(nodesById, "RDS Standby");
-			addEdge(edges, "RDS", "RDS Standby", "동기 복제");
-			return;
-		}
-		if (optionName.contains("Read Replica")) {
-			addNode(nodesById, "RDS");
-			addNode(nodesById, "Read Replica");
-			addEdge(edges, "EC2", "Read Replica", "읽기 요청");
-			addEdge(edges, "RDS", "Read Replica", "비동기 복제");
-			return;
-		}
-		if (optionName.contains("Redis")) {
-			addNode(nodesById, "Redis");
-			addEdge(edges, "EC2", "Redis", "캐시 조회");
-		}
+	}
+
+	private static void addAutoScalingPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "ALB");
+		addNode(nodesById, "Auto Scaling");
+		addNode(nodesById, "EC2");
+		addEdge(edges, "Client", "ALB", "HTTP 요청");
+		addEdge(edges, "ALB", "Auto Scaling", "정상 target 분산");
+		addEdge(edges, "Auto Scaling", "EC2", "인스턴스 확장");
+	}
+
+	private static void addPrivateAlbPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "ALB");
+		addNode(nodesById, "Private subnet");
+		addNode(nodesById, "EC2");
+		addEdge(edges, "Client", "ALB", "외부 진입점");
+		addEdge(edges, "ALB", "Private subnet", "내부 전달");
+		addEdge(edges, "Private subnet", "EC2", "애플리케이션 요청");
+	}
+
+	private static void addNatGatewayPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "Private subnet");
+		addNode(nodesById, "NAT Gateway");
+		addNode(nodesById, "Internet Gateway");
+		addEdge(edges, "Private subnet", "NAT Gateway", "아웃바운드");
+		addEdge(edges, "NAT Gateway", "Internet Gateway", "인터넷 접근");
+	}
+
+	private static void addMultiAzPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "RDS");
+		addNode(nodesById, "RDS Standby");
+		addEdge(edges, "RDS", "RDS Standby", "동기 복제");
+	}
+
+	private static void addReadReplicaPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "RDS");
+		addNode(nodesById, "Read Replica");
+		addEdge(edges, "EC2", "Read Replica", "읽기 요청");
+		addEdge(edges, "RDS", "Read Replica", "비동기 복제");
+	}
+
+	private static void addRedisPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "Redis");
+		addEdge(edges, "EC2", "Redis", "캐시 조회");
 	}
 
 	private static void addNode(Map<String, ArchitectureNode> nodesById, String label) {
