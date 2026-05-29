@@ -17,6 +17,7 @@ import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.GetScenarioUseCase;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.SimulateScenarioUseCase;
+import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraphs;
 import com.yunhwan.cloudsimlab.scenario.domain.RelatedLearningDocument;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
@@ -105,6 +106,7 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 
 		boolean satisfiesGoodCriteria = hasCoreOptions ? includesCoreOption : hasUsefulOption;
 		SimulationResultType resultType = determineResultType(hasUsefulOption, satisfiesGoodCriteria, riskScore);
+		List<String> finalArchitecture = finalArchitectureFor(scenario, selectedOptions);
 		return new SimulationResult(
 				scenario.getId(),
 				resultType,
@@ -113,7 +115,8 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				summaryFor(resultType),
 				detailFor(scenario, selectedOptions, resultType, hasCoreOptions, includesCoreOption),
 				selectedOptions,
-				finalArchitectureFor(scenario, selectedOptions),
+				finalArchitecture,
+				ArchitectureGraphs.finalFor(scenario, selectedOptions),
 				relatedLearningDocumentsFor(scenario)
 		);
 	}
