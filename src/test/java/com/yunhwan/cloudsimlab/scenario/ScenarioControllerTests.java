@@ -1,5 +1,6 @@
 package com.yunhwan.cloudsimlab.scenario;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -47,6 +48,7 @@ class ScenarioControllerTests {
 	private LearningDocumentSeedPort learningDocumentSeedPort;
 
 	private Scenario computeScenario;
+	private Scenario networkScenario;
 	private LearningDocument computeDocument;
 
 	@BeforeEach
@@ -70,7 +72,7 @@ class ScenarioControllerTests {
 						ScenarioOption.newOption("큰 EC2 인스턴스로 변경", "용량은 늘어나지만 비용도 증가합니다.", 2, true, 0)
 				)
 		));
-		seedPort.save(Scenario.newScenario(
+		networkScenario = seedPort.save(Scenario.newScenario(
 				"퍼블릭/프라이빗 트래픽 분리",
 				ScenarioCategory.NETWORK,
 				ScenarioLevel.INTERMEDIATE,
@@ -156,7 +158,9 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.score").value(2))
 				.andExpect(jsonPath("$.riskScore").value(0))
 				.andExpect(jsonPath("$.summary").value("선택한 구성이 시나리오 요구를 잘 해결합니다."))
-				.andExpect(jsonPath("$.detail").exists())
+				.andExpect(jsonPath("$.detail", containsString("시나리오 목표인 '컴퓨팅 용량을 선택합니다.'")))
+				.andExpect(jsonPath("$.detail", containsString("큰 EC2 인스턴스로 변경은 용량은 늘어나지만 비용도 증가합니다.")))
+				.andExpect(jsonPath("$.detail", containsString("핵심 선택지는")))
 				.andExpect(jsonPath("$.selectedOptions", hasSize(1)))
 				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId))
 				.andExpect(jsonPath("$.finalArchitecture", hasSize(3)))
@@ -195,7 +199,70 @@ class ScenarioControllerTests {
 								{"selectedOptionIds":[%d]}
 								""".formatted(optionId)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.resultType").value("GOOD"));
+				.andExpect(jsonPath("$.resultType").value("GOOD"))
+				.andExpect(jsonPath("$.detail", containsString("핵심 선택지가 포함되어 현재 문제의 주요 원인을 직접 줄입니다.")));
+	}
+
+	@Test
+	void 핵심_선택지가_빠진_유효한_선택지는_PARTIAL_결과와_한계를_반환한다() throws Exception {
+		Long partialOptionId = computeScenario.getOptions().getFirst().getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(partialOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resultType").value("PARTIAL"))
+				.andExpect(jsonPath("$.score").value(1))
+				.andExpect(jsonPath("$.riskScore").value(0))
+				.andExpect(jsonPath("$.detail", containsString("핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다.")))
+				.andExpect(jsonPath("$.detail", containsString("작은 EC2 인스턴스 유지는 비용은 낮지만 용량이 제한적입니다.")));
+	}
+
+	@Test
+	void 위험_점수가_높은_선택지는_RISKY_결과와_위험_설명을_반환한다() throws Exception {
+		Long riskyOptionId = networkScenario.getOptions().getFirst().getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", networkScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(riskyOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resultType").value("RISKY"))
+				.andExpect(jsonPath("$.score").value(1))
+				.andExpect(jsonPath("$.riskScore").value(2))
+				.andExpect(jsonPath("$.detail", containsString("위험 점수가 높아 부작용을 먼저 검토해야 합니다.")))
+				.andExpect(jsonPath("$.detail", containsString("보안 노출")));
+	}
+
+	@Test
+	void 문제_원인과_맞지_않는_선택지는_WRONG_결과와_재판단_안내를_반환한다() throws Exception {
+		Scenario wrongScenario = seedPort.save(Scenario.newScenario(
+				"DB 병목 대응",
+				ScenarioCategory.STORAGE,
+				ScenarioLevel.INTERMEDIATE,
+				"RDS 조회 병목을 줄입니다.",
+				"조회 요청 증가로 RDS CPU가 상승했습니다.",
+				List.of("Client", "EC2", "RDS"),
+				List.of(
+						ScenarioOption.newOption("ALB만 추가", "진입점은 정리되지만 RDS 조회 병목은 줄이지 못합니다.", 0, false, 0)
+				)
+		));
+		Long wrongOptionId = wrongScenario.getOptions().getFirst().getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", wrongScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(wrongOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resultType").value("WRONG"))
+				.andExpect(jsonPath("$.score").value(0))
+				.andExpect(jsonPath("$.riskScore").value(0))
+				.andExpect(jsonPath("$.detail", containsString("원인을 직접 줄이는 선택지가 포함되지 않았습니다.")))
+				.andExpect(jsonPath("$.detail", containsString("점수가 없는 선택지")));
 	}
 
 	@Test
@@ -209,7 +276,8 @@ class ScenarioControllerTests {
 								{"selectedOptionIds":[%d]}
 								""".formatted(redisOptionId)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.resultType").value("GOOD"));
+				.andExpect(jsonPath("$.resultType").value("GOOD"))
+				.andExpect(jsonPath("$.detail", containsString("Redis Cache 추가는 반복 조회를 빠르게 처리하고 RDS 부하를 줄입니다.")));
 	}
 
 	@Test
@@ -223,7 +291,8 @@ class ScenarioControllerTests {
 								{"selectedOptionIds":[%d]}
 								""".formatted(readReplicaOptionId)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.resultType").value("GOOD"));
+				.andExpect(jsonPath("$.resultType").value("GOOD"))
+				.andExpect(jsonPath("$.detail", containsString("Read Replica 추가는 읽기 부하를 분산합니다.")));
 	}
 
 	@Test
