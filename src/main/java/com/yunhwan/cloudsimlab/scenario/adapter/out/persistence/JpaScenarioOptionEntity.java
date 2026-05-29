@@ -17,6 +17,9 @@ class JpaScenarioOptionEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@Column(length = 80)
+	private String graphKey;
+
 	@Column(nullable = false, length = 120)
 	private String name;
 
@@ -35,8 +38,9 @@ class JpaScenarioOptionEntity {
 	protected JpaScenarioOptionEntity() {
 	}
 
-	private JpaScenarioOptionEntity(Long id, String name, String description, int score, boolean core, int riskScore) {
+	private JpaScenarioOptionEntity(Long id, String graphKey, String name, String description, int score, boolean core, int riskScore) {
 		this.id = id;
+		this.graphKey = graphKey;
 		this.name = name;
 		this.description = description;
 		this.score = score;
@@ -47,6 +51,7 @@ class JpaScenarioOptionEntity {
 	static JpaScenarioOptionEntity from(ScenarioOption option) {
 		return new JpaScenarioOptionEntity(
 				option.getId(),
+				option.getGraphKey(),
 				option.getName(),
 				option.getDescription(),
 				option.getScore(),
@@ -56,6 +61,6 @@ class JpaScenarioOptionEntity {
 	}
 
 	ScenarioOption toDomain() {
-		return new ScenarioOption(id, name, description, score, core, riskScore);
+		return new ScenarioOption(id, graphKey, name, description, score, core, riskScore);
 	}
 }

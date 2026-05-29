@@ -305,6 +305,32 @@ class ScenarioControllerTests {
 	}
 
 	@Test
+	void graph_응답은_표시용_제목과_선택지명이_아닌_안정적인_key로_생성된다() throws Exception {
+		Scenario renamedScenario = seedPort.save(Scenario.newScenarioWithGraphKey(
+				"read-heavy-performance",
+				"읽기 병목 완화",
+				ScenarioCategory.STORAGE,
+				ScenarioLevel.INTERMEDIATE,
+				"읽기 부하를 줄입니다.",
+				"반복 조회 증가로 DB 부하가 커졌습니다.",
+				List.of("Client", "ALB", "EC2", "RDS"),
+				List.of(
+						ScenarioOption.newOptionWithGraphKey("add-redis-cache", "Cache layer", "반복 조회를 캐시로 처리합니다.", 2, true, 0)
+				)
+		));
+		Long optionId = renamedScenario.getOptions().getFirst().getId();
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", renamedScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(optionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.finalArchitectureGraph.nodes[?(@.id == 'redis')]", hasSize(1)))
+				.andExpect(jsonPath("$.finalArchitectureGraph.edges[?(@.source == 'ec2' && @.target == 'redis')]", hasSize(1)));
+	}
+
+	@Test
 	void 영문으로_끝나는_선택지명은_자연스러운_조사로_피드백을_반환한다() throws Exception {
 		Scenario redisScenario = seedPort.save(Scenario.newScenario(
 				"Redis 캐시 적용",
@@ -417,7 +443,8 @@ class ScenarioControllerTests {
 	}
 
 	private Scenario readHeavyScenario() {
-		return Scenario.newScenario(
+		return Scenario.newScenarioWithGraphKey(
+				"read-heavy-performance",
 				"조회 중심 성능 문제",
 				ScenarioCategory.STORAGE,
 				ScenarioLevel.INTERMEDIATE,
@@ -425,8 +452,8 @@ class ScenarioControllerTests {
 				"상품 목록과 상세 조회가 급증하면서 RDS CPU와 쿼리 시간이 상승했습니다.",
 				List.of("Client", "ALB", "EC2", "RDS"),
 				List.of(
-						ScenarioOption.newOption("Redis Cache 추가", "반복 조회를 빠르게 처리하고 RDS 부하를 줄입니다.", 2, true, 0),
-						ScenarioOption.newOption("Read Replica 추가", "읽기 부하를 분산합니다.", 2, true, 0),
+						ScenarioOption.newOptionWithGraphKey("add-redis-cache", "Redis Cache 추가", "반복 조회를 빠르게 처리하고 RDS 부하를 줄입니다.", 2, true, 0),
+						ScenarioOption.newOptionWithGraphKey("add-read-replica", "Read Replica 추가", "읽기 부하를 분산합니다.", 2, true, 0),
 						ScenarioOption.newOption("EC2만 증설", "RDS 조회 병목은 그대로 남을 수 있습니다.", 1, false, 1)
 				)
 		);

@@ -3,6 +3,7 @@ package com.yunhwan.cloudsimlab.scenario.domain;
 public class ScenarioOption {
 
 	private final Long id;
+	private final String graphKey;
 	private final String name;
 	private final String description;
 	private final int score;
@@ -14,7 +15,12 @@ public class ScenarioOption {
 	}
 
 	public ScenarioOption(Long id, String name, String description, int score, boolean core, int riskScore) {
+		this(id, null, name, description, score, core, riskScore);
+	}
+
+	public ScenarioOption(Long id, String graphKey, String name, String description, int score, boolean core, int riskScore) {
 		this.id = id;
+		this.graphKey = graphKey;
 		this.name = name;
 		this.description = description;
 		this.score = score;
@@ -30,8 +36,23 @@ public class ScenarioOption {
 		return new ScenarioOption(null, name, description, score, core, riskScore);
 	}
 
+	public static ScenarioOption newOptionWithGraphKey(
+			String graphKey,
+			String name,
+			String description,
+			int score,
+			boolean core,
+			int riskScore
+	) {
+		return new ScenarioOption(null, graphKey, name, description, score, core, riskScore);
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public String getGraphKey() {
+		return graphKey;
 	}
 
 	public String getName() {

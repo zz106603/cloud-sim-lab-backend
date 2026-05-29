@@ -5,6 +5,7 @@ import java.util.List;
 public class Scenario {
 
 	private final Long id;
+	private final String graphKey;
 	private final String title;
 	private final ScenarioCategory category;
 	private final ScenarioLevel level;
@@ -27,6 +28,7 @@ public class Scenario {
 
 	public Scenario(
 			Long id,
+			String graphKey,
 			String title,
 			ScenarioCategory category,
 			ScenarioLevel level,
@@ -36,6 +38,7 @@ public class Scenario {
 			List<ScenarioOption> options
 	) {
 		this.id = id;
+		this.graphKey = graphKey;
 		this.title = title;
 		this.category = category;
 		this.level = level;
@@ -43,6 +46,19 @@ public class Scenario {
 		this.description = description;
 		this.initialArchitecture = initialArchitecture == null ? List.of() : List.copyOf(initialArchitecture);
 		this.options = options == null ? List.of() : List.copyOf(options);
+	}
+
+	public Scenario(
+			Long id,
+			String title,
+			ScenarioCategory category,
+			ScenarioLevel level,
+			String summary,
+			String description,
+			List<String> initialArchitecture,
+			List<ScenarioOption> options
+	) {
+		this(id, null, title, category, level, summary, description, initialArchitecture, options);
 	}
 
 	public static Scenario newScenario(
@@ -68,8 +84,25 @@ public class Scenario {
 		return new Scenario(null, title, category, level, summary, description, initialArchitecture, options);
 	}
 
+	public static Scenario newScenarioWithGraphKey(
+			String graphKey,
+			String title,
+			ScenarioCategory category,
+			ScenarioLevel level,
+			String summary,
+			String description,
+			List<String> initialArchitecture,
+			List<ScenarioOption> options
+	) {
+		return new Scenario(null, graphKey, title, category, level, summary, description, initialArchitecture, options);
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public String getGraphKey() {
+		return graphKey;
 	}
 
 	public String getTitle() {
