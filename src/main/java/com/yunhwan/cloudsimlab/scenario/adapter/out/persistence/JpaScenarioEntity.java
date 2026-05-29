@@ -30,6 +30,9 @@ class JpaScenarioEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@Column(length = 80)
+	private String graphKey;
+
 	@Column(nullable = false, length = 120)
 	private String title;
 
@@ -62,6 +65,7 @@ class JpaScenarioEntity {
 
 	private JpaScenarioEntity(
 			Long id,
+			String graphKey,
 			String title,
 			ScenarioCategory category,
 			ScenarioLevel level,
@@ -71,6 +75,7 @@ class JpaScenarioEntity {
 			List<JpaScenarioOptionEntity> options
 	) {
 		this.id = id;
+		this.graphKey = graphKey;
 		this.title = title;
 		this.category = category;
 		this.level = level;
@@ -83,6 +88,7 @@ class JpaScenarioEntity {
 	static JpaScenarioEntity from(Scenario scenario) {
 		return new JpaScenarioEntity(
 				scenario.getId(),
+				scenario.getGraphKey(),
 				scenario.getTitle(),
 				scenario.getCategory(),
 				scenario.getLevel(),
@@ -98,6 +104,7 @@ class JpaScenarioEntity {
 	Scenario toDomain() {
 		return new Scenario(
 				id,
+				graphKey,
 				title,
 				category,
 				level,

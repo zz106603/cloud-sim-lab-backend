@@ -32,7 +32,7 @@ public final class ArchitectureGraphs {
 		}
 
 		for (ScenarioOption option : selectedOptions) {
-			applyOption(nodesById, edges, scenario.getTitle(), option.getName());
+			applyOption(nodesById, edges, scenario.getGraphKey(), option.getGraphKey());
 		}
 		return new ArchitectureGraph(new ArrayList<>(nodesById.values()), edges);
 	}
@@ -40,21 +40,29 @@ public final class ArchitectureGraphs {
 	private static void applyOption(
 			Map<String, ArchitectureNode> nodesById,
 			List<ArchitectureEdge> edges,
-			String scenarioTitle,
-			String optionName
+			String scenarioGraphKey,
+			String optionGraphKey
 	) {
-		switch (scenarioTitle + "::" + optionName) {
-			case "단일 Spring Boot 배포::ALB와 Auto Scaling 추가",
-					"트래픽 급증 대응::Auto Scaling 추가" -> addAutoScalingPath(nodesById, edges);
-			case "Private subnet 애플리케이션 서버::ALB 앞단과 Private subnet EC2로 분리" -> addPrivateAlbPath(nodesById, edges);
-			case "Private subnet 애플리케이션 서버::Private subnet EC2와 NAT Gateway 구성" -> addNatGatewayPath(nodesById, edges);
-			case "RDS 장애 대응::Multi-AZ 활성화" -> addMultiAzPath(nodesById, edges);
-			case "RDS 장애 대응::Read Replica만 추가",
-					"조회 중심 성능 문제::Read Replica 추가" -> addReadReplicaPath(nodesById, edges);
-			case "조회 중심 성능 문제::Redis Cache 추가" -> addRedisPath(nodesById, edges);
+		switch (graphMappingKey(scenarioGraphKey, optionGraphKey)) {
+			case "single-spring-boot::add-alb-auto-scaling",
+					"traffic-spike-compute::add-auto-scaling" -> addAutoScalingPath(nodesById, edges);
+			case "private-subnet-app::add-alb-private-ec2" -> addPrivateAlbPath(nodesById, edges);
+			case "private-subnet-app::add-private-ec2-nat" -> addNatGatewayPath(nodesById, edges);
+			case "rds-failure::enable-multi-az" -> addMultiAzPath(nodesById, edges);
+			case "rds-failure::add-read-replica",
+					"read-heavy-performance::add-read-replica" -> addReadReplicaPath(nodesById, edges);
+			case "read-heavy-performance::add-redis-cache" -> addRedisPath(nodesById, edges);
 			default -> {
 			}
 		}
+	}
+
+	private static String graphMappingKey(String scenarioGraphKey, String optionGraphKey) {
+		return normalizedKey(scenarioGraphKey) + "::" + normalizedKey(optionGraphKey);
+	}
+
+	private static String normalizedKey(String key) {
+		return key == null ? "" : key.trim();
 	}
 
 	private static void addAutoScalingPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
@@ -102,9 +110,9 @@ public final class ArchitectureGraphs {
 	}
 
 	private static void addNode(Map<String, ArchitectureNode> nodesById, String label) {
-		nodesById.putIfAbsent(nodeId(label), new ArchitectureNode(
-				nodeId(label),
-				label,
+		nodesById.computeIfAbsent(nodeId(label), nodeId -> new ArchitectureNode(
+				nodeId,
+				nodeLabel(label),
 				nodeType(label),
 				nodeDescription(label)
 		));
@@ -121,12 +129,23 @@ public final class ArchitectureGraphs {
 	}
 
 	private static String nodeId(String label) {
-		return label.toLowerCase(Locale.ROOT)
+		if (label == null || label.isBlank()) {
+			return "unknown";
+		}
+		return label.trim()
+				.toLowerCase(Locale.ROOT)
 				.replace(" ", "-")
 				.replace("_", "-");
 	}
 
+	private static String nodeLabel(String label) {
+		return label == null || label.isBlank() ? "Unknown" : label;
+	}
+
 	private static String nodeType(String label) {
+		if (label == null || label.isBlank()) {
+			return "RESOURCE";
+		}
 		if (label.contains("Client")) {
 			return "CLIENT";
 		}
@@ -177,10 +196,10 @@ public final class ArchitectureGraphs {
 	}
 
 	private static String defaultEdgeLabel(String source, String target) {
-		if (source.contains("Client")) {
+		if (source != null && source.contains("Client")) {
 			return "요청";
 		}
-		if (target.contains("RDS")) {
+		if (target != null && target.contains("RDS")) {
 			return "DB 접근";
 		}
 		return "연결";
