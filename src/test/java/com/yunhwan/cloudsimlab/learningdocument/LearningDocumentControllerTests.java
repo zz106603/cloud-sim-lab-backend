@@ -85,7 +85,10 @@ class LearningDocumentControllerTests {
 				.andExpect(jsonPath("$.content").value("Virtual machines run application workloads on configurable CPU and memory resources."))
 				.andExpect(jsonPath("$.relatedScenarios", hasSize(1)))
 				.andExpect(jsonPath("$.relatedScenarios[0].id").value(scenario.getId()))
-				.andExpect(jsonPath("$.relatedScenarios[0].title").value("Scale a web service"));
+				.andExpect(jsonPath("$.relatedScenarios[0].title").value("Scale a web service"))
+				.andExpect(jsonPath("$.relatedScenarios[0].reason").value(
+						"이 문서의 'Virtual machines and compute capacity' 개념을 Scale a web service 상황에서 판단해 볼 수 있습니다."
+				));
 	}
 
 	@Test
