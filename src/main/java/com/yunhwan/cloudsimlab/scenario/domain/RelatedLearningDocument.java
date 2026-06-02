@@ -8,6 +8,7 @@ public record RelatedLearningDocument(
 		String title,
 		DocumentCategory category,
 		DocumentLevel level,
-		String summary
+		String summary,
+		String reviewReason
 ) {
 }

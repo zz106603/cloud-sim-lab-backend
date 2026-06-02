@@ -10,6 +10,7 @@ public class SimulationResult {
 	private final int riskScore;
 	private final String summary;
 	private final String detail;
+	private final SimulationReview review;
 	private final List<ScenarioOption> selectedOptions;
 	private final List<String> finalArchitecture;
 	private final ArchitectureGraph finalArchitectureGraph;
@@ -22,6 +23,7 @@ public class SimulationResult {
 			int riskScore,
 			String summary,
 			String detail,
+			SimulationReview review,
 			List<ScenarioOption> selectedOptions,
 			List<String> finalArchitecture,
 			ArchitectureGraph finalArchitectureGraph,
@@ -33,6 +35,7 @@ public class SimulationResult {
 		this.riskScore = riskScore;
 		this.summary = summary;
 		this.detail = detail;
+		this.review = review == null ? new SimulationReview("", List.of(), List.of(), List.of(), "") : review;
 		this.selectedOptions = selectedOptions == null ? List.of() : List.copyOf(selectedOptions);
 		this.finalArchitecture = finalArchitecture == null ? List.of() : List.copyOf(finalArchitecture);
 		this.finalArchitectureGraph = finalArchitectureGraph == null ? new ArchitectureGraph(List.of(), List.of()) : finalArchitectureGraph;
@@ -61,6 +64,10 @@ public class SimulationResult {
 
 	public String getDetail() {
 		return detail;
+	}
+
+	public SimulationReview getReview() {
+		return review;
 	}
 
 	public List<ScenarioOption> getSelectedOptions() {
