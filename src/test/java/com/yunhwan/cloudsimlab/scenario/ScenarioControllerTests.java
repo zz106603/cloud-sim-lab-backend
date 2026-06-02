@@ -130,7 +130,12 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.initialArchitectureGraph.edges[0].target").value("ec2"))
 				.andExpect(jsonPath("$.options", hasSize(2)))
 				.andExpect(jsonPath("$.options[0].name").value("작은 EC2 인스턴스 유지"))
-				.andExpect(jsonPath("$.options[0].description").value("비용은 낮지만 용량이 제한적입니다."));
+				.andExpect(jsonPath("$.options[0].description").value("비용은 낮지만 용량이 제한적입니다."))
+				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
+				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()))
+				.andExpect(jsonPath("$.relatedLearningDocuments[0].reviewReason").value(
+						"이 시나리오를 풀기 전에 Virtual machines and compute capacity의 판단 기준을 먼저 확인하세요."
+				));
 	}
 
 	@Test
@@ -167,13 +172,21 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.detail", containsString("시나리오 목표인 '컴퓨팅 용량을 선택합니다.'")))
 				.andExpect(jsonPath("$.detail", containsString("큰 EC2 인스턴스로 변경은 용량은 늘어나지만 비용도 증가합니다.")))
 				.andExpect(jsonPath("$.detail", containsString("핵심 선택지는")))
+				.andExpect(jsonPath("$.review.reason", containsString("시나리오 목표인 '컴퓨팅 용량을 선택합니다.'")))
+				.andExpect(jsonPath("$.review.strengths", hasSize(2)))
+				.andExpect(jsonPath("$.review.limitations", hasSize(0)))
+				.andExpect(jsonPath("$.review.missedTradeOffs", hasSize(1)))
+				.andExpect(jsonPath("$.review.nextStep").value("다음으로 비용, 확장 지연, 장애 시 우회 흐름을 함께 확인하세요."))
 				.andExpect(jsonPath("$.selectedOptions", hasSize(1)))
 				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId))
 				.andExpect(jsonPath("$.finalArchitecture", hasSize(3)))
 				.andExpect(jsonPath("$.finalArchitecture[1]").value("EC2"))
 				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()))
-				.andExpect(jsonPath("$.relatedLearningDocuments[0].title").value("Virtual machines and compute capacity"));
+				.andExpect(jsonPath("$.relatedLearningDocuments[0].title").value("Virtual machines and compute capacity"))
+				.andExpect(jsonPath("$.relatedLearningDocuments[0].reviewReason").value(
+						"Virtual machines and compute capacity 관점에서 선택의 비용, 복잡도, 장애 우회 흐름을 복습하세요."
+				));
 	}
 
 	@Test
@@ -223,6 +236,7 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.score").value(1))
 				.andExpect(jsonPath("$.riskScore").value(0))
 				.andExpect(jsonPath("$.detail", containsString("핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다.")))
+				.andExpect(jsonPath("$.review.limitations[0]").value("핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다."))
 				.andExpect(jsonPath("$.detail", containsString("작은 EC2 인스턴스 유지는 비용은 낮지만 용량이 제한적입니다.")));
 	}
 
@@ -240,6 +254,8 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.score").value(1))
 				.andExpect(jsonPath("$.riskScore").value(2))
 				.andExpect(jsonPath("$.detail", containsString("위험 점수가 높아 부작용을 먼저 검토해야 합니다.")))
+				.andExpect(jsonPath("$.review.limitations[0]").value("효과가 있더라도 운영 위험을 줄일 보완 조건이 필요합니다."))
+				.andExpect(jsonPath("$.review.missedTradeOffs[0]", containsString("보안 노출")))
 				.andExpect(jsonPath("$.detail", containsString("보안 노출")));
 	}
 
