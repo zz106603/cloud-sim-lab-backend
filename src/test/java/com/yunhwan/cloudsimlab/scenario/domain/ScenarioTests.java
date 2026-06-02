@@ -2,6 +2,8 @@ package com.yunhwan.cloudsimlab.scenario.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 class ScenarioTests {
@@ -19,5 +21,27 @@ class ScenarioTests {
 		);
 
 		assertThat(scenario.getOptions()).isEmpty();
+	}
+
+	@Test
+	void simulationReviewTreatsNullFieldsAsEmptyValues() {
+		SimulationReview review = new SimulationReview(null, null, null, null, null);
+
+		assertThat(review.reason()).isEmpty();
+		assertThat(review.strengths()).isEmpty();
+		assertThat(review.limitations()).isEmpty();
+		assertThat(review.missedTradeOffs()).isEmpty();
+		assertThat(review.nextStep()).isEmpty();
+	}
+
+	@Test
+	void simulationReviewCopiesListFields() {
+		List<String> strengths = new java.util.ArrayList<>();
+		strengths.add("핵심 선택지를 포함합니다.");
+
+		SimulationReview review = new SimulationReview("reason", strengths, null, null, "next");
+		strengths.add("추가 변경");
+
+		assertThat(review.strengths()).containsExactly("핵심 선택지를 포함합니다.");
 	}
 }
