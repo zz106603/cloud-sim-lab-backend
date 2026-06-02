@@ -10,8 +10,10 @@ public record SimulationReview(
 		String nextStep
 ) {
 	public SimulationReview {
+		reason = reason == null ? "" : reason;
 		strengths = strengths == null ? List.of() : List.copyOf(strengths);
 		limitations = limitations == null ? List.of() : List.copyOf(limitations);
 		missedTradeOffs = missedTradeOffs == null ? List.of() : List.copyOf(missedTradeOffs);
+		nextStep = nextStep == null ? "" : nextStep;
 	}
 }

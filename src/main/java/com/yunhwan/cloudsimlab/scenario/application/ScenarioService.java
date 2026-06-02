@@ -145,6 +145,9 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 	}
 
 	private List<RelatedLearningDocument> relatedLearningDocumentsFor(Scenario scenario, SimulationResultType resultType) {
+		if (scenario == null) {
+			return List.of();
+		}
 		DocumentCategory category = documentCategoryFor(scenario.getCategory());
 		if (category == null) {
 			return List.of();

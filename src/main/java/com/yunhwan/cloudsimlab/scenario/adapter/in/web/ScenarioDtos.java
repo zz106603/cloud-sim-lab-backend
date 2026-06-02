@@ -49,6 +49,7 @@ final class ScenarioDtos {
 	) {
 		static DetailResponse from(Scenario scenario, List<RelatedLearningDocument> relatedLearningDocuments) {
 			String problem = scenario.getDescription();
+			List<RelatedLearningDocument> documents = relatedLearningDocuments == null ? List.of() : relatedLearningDocuments;
 			return new DetailResponse(
 					scenario.getId(),
 					scenario.getTitle(),
@@ -62,7 +63,7 @@ final class ScenarioDtos {
 					scenario.getOptions().stream()
 							.map(OptionResponse::from)
 							.toList(),
-					relatedLearningDocuments.stream()
+					documents.stream()
 							.map(RelatedLearningDocumentResponse::from)
 							.toList()
 			);
