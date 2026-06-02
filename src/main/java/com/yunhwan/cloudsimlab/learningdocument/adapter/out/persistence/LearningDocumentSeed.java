@@ -1,11 +1,14 @@
 package com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentSeedPort;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
@@ -21,8 +24,9 @@ class LearningDocumentSeed {
 	private final LearningDocumentContentLoader contentLoader = new LearningDocumentContentLoader();
 
 	@Bean
-	CommandLineRunner seedLearningDocuments(LearningDocumentSeedPort seedPort) {
-		return args -> {
+	CommandLineRunner seedLearningDocuments(LearningDocumentSeedPort seedPort, PlatformTransactionManager transactionManager) {
+		TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+		return args -> transactionTemplate.executeWithoutResult(status -> {
 			if (seedPort.count() > 0) {
 				return;
 			}
@@ -34,7 +38,7 @@ class LearningDocumentSeed {
 					document.summary(),
 					contentLoader.load(CONTENT_ROOT + document.contentFileName())
 			)));
-		};
+		});
 	}
 
 	private List<SeedDocument> documents() {
@@ -119,5 +123,19 @@ class LearningDocumentSeed {
 			String summary,
 			String contentFileName
 	) {
+		private SeedDocument {
+			title = requireText(title, "title");
+			category = Objects.requireNonNull(category, "Learning document seed category must not be null");
+			level = Objects.requireNonNull(level, "Learning document seed level must not be null");
+			summary = requireText(summary, "summary");
+			contentFileName = requireText(contentFileName, "contentFileName");
+		}
+
+		private static String requireText(String value, String fieldName) {
+			if (value == null || value.isBlank()) {
+				throw new IllegalArgumentException("Learning document seed " + fieldName + " must not be blank");
+			}
+			return value;
+		}
 	}
 }
