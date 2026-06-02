@@ -44,20 +44,28 @@ final class LearningDocumentDtos {
 					document.getSummary(),
 					document.getContent(),
 					relatedScenarios.stream()
-							.map(RelatedScenarioResponse::from)
+							.map(scenario -> RelatedScenarioResponse.from(document, scenario))
 							.toList()
 			);
 		}
 	}
 
-	record RelatedScenarioResponse(Long id, String title, ScenarioCategory category, ScenarioLevel level, String summary) {
-		static RelatedScenarioResponse from(Scenario scenario) {
+	record RelatedScenarioResponse(
+			Long id,
+			String title,
+			ScenarioCategory category,
+			ScenarioLevel level,
+			String summary,
+			String reason
+	) {
+		static RelatedScenarioResponse from(LearningDocument document, Scenario scenario) {
 			return new RelatedScenarioResponse(
 					scenario.getId(),
 					scenario.getTitle(),
 					scenario.getCategory(),
 					scenario.getLevel(),
-					scenario.getSummary()
+					scenario.getSummary(),
+					"이 문서의 '" + document.getTitle() + "' 개념을 " + scenario.getTitle() + " 상황에서 판단해 볼 수 있습니다."
 			);
 		}
 	}
