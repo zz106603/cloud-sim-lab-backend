@@ -23,6 +23,7 @@ import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.SimulationReview;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResult;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
 
@@ -65,6 +66,11 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 	public Scenario findOne(Long scenarioId) {
 		return queryPort.findById(scenarioId)
 				.orElseThrow(() -> new ScenarioNotFoundException(scenarioId));
+	}
+
+	@Override
+	public List<RelatedLearningDocument> findRelatedLearningDocuments(Scenario scenario) {
+		return relatedLearningDocumentsFor(scenario, null);
 	}
 
 	@Override
@@ -114,10 +120,11 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				riskScore,
 				summaryFor(resultType),
 				detailFor(scenario, selectedOptions, resultType, hasCoreOptions, includesCoreOption),
+				reviewFor(scenario, selectedOptions, resultType, hasCoreOptions, includesCoreOption),
 				selectedOptions,
 				finalArchitecture,
 				ArchitectureGraphs.finalFor(scenario, selectedOptions),
-				relatedLearningDocumentsFor(scenario)
+				relatedLearningDocumentsFor(scenario, resultType)
 		);
 	}
 
@@ -137,13 +144,13 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				.toList();
 	}
 
-	private List<RelatedLearningDocument> relatedLearningDocumentsFor(Scenario scenario) {
+	private List<RelatedLearningDocument> relatedLearningDocumentsFor(Scenario scenario, SimulationResultType resultType) {
 		DocumentCategory category = documentCategoryFor(scenario.getCategory());
 		if (category == null) {
 			return List.of();
 		}
 		return learningDocumentQueryPort.findAllByCategory(category).stream()
-				.map(this::toRelatedLearningDocument)
+				.map(document -> toRelatedLearningDocument(document, resultType))
 				.toList();
 	}
 
@@ -159,14 +166,27 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		};
 	}
 
-	private RelatedLearningDocument toRelatedLearningDocument(LearningDocument document) {
+	private RelatedLearningDocument toRelatedLearningDocument(LearningDocument document, SimulationResultType resultType) {
 		return new RelatedLearningDocument(
 				document.getId(),
 				document.getTitle(),
 				document.getCategory(),
 				document.getLevel(),
-				document.getSummary()
+				document.getSummary(),
+				reviewReasonFor(document, resultType)
 		);
+	}
+
+	private String reviewReasonFor(LearningDocument document, SimulationResultType resultType) {
+		if (resultType == null) {
+			return "이 시나리오를 풀기 전에 " + document.getTitle() + "의 판단 기준을 먼저 확인하세요.";
+		}
+		return switch (resultType) {
+			case GOOD -> document.getTitle() + " 관점에서 선택의 비용, 복잡도, 장애 우회 흐름을 복습하세요.";
+			case PARTIAL -> document.getTitle() + "에서 남은 병목이나 빠진 핵심 선택지를 다시 확인하세요.";
+			case RISKY -> document.getTitle() + "의 운영 위험과 보완 조건을 기준으로 선택을 재검토하세요.";
+			case WRONG -> document.getTitle() + "의 기본 판단 기준을 다시 확인한 뒤 문제 원인에 맞는 선택지를 고르세요.";
+		};
 	}
 
 	private SimulationResultType determineResultType(boolean hasUsefulOption, boolean satisfiesGoodCriteria, int riskScore) {
@@ -208,6 +228,22 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				.collect(Collectors.joining(" "));
 	}
 
+	private SimulationReview reviewFor(
+			Scenario scenario,
+			List<ScenarioOption> selectedOptions,
+			SimulationResultType resultType,
+			boolean hasCoreOptions,
+			boolean includesCoreOption
+	) {
+		return new SimulationReview(
+				resultReasonFor(scenario, resultType, hasCoreOptions, includesCoreOption),
+				strengthsFor(selectedOptions, includesCoreOption),
+				limitationsFor(resultType, hasCoreOptions, includesCoreOption, selectedOptions),
+				missedTradeOffsFor(selectedOptions),
+				nextStepFor(resultType)
+		);
+	}
+
 	private String resultReasonFor(
 			Scenario scenario,
 			SimulationResultType resultType,
@@ -237,6 +273,49 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		return selectedOptions.stream()
 				.map(option -> option.getName() + subjectParticleFor(option.getName()) + " " + option.getDescription())
 				.collect(Collectors.joining(" ", "선택지별 판단: ", ""));
+	}
+
+	private List<String> strengthsFor(List<ScenarioOption> selectedOptions, boolean includesCoreOption) {
+		return Stream.of(
+						includesCoreOption ? "핵심 선택지를 포함해 현재 시나리오의 주요 목표를 직접 개선합니다." : "",
+						selectedOptions.stream().anyMatch(option -> option.getScore() > 0)
+								? "선택한 구성은 현재 문제 완화에 기여하는 요소를 포함합니다."
+								: ""
+				)
+				.filter(text -> !text.isBlank())
+				.toList();
+	}
+
+	private List<String> limitationsFor(
+			SimulationResultType resultType,
+			boolean hasCoreOptions,
+			boolean includesCoreOption,
+			List<ScenarioOption> selectedOptions
+	) {
+		return Stream.of(
+						hasCoreOptions && !includesCoreOption ? "핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다." : "",
+						selectedOptions.stream().anyMatch(option -> option.getScore() <= 0)
+								? "일부 선택지는 일반적으로 유효해도 현재 문제 원인에는 직접 맞지 않을 수 있습니다."
+								: "",
+						resultType == SimulationResultType.RISKY ? "효과가 있더라도 운영 위험을 줄일 보완 조건이 필요합니다." : ""
+				)
+				.filter(text -> !text.isBlank())
+				.toList();
+	}
+
+	private List<String> missedTradeOffsFor(List<ScenarioOption> selectedOptions) {
+		boolean includesRiskOption = selectedOptions.stream()
+				.anyMatch(option -> option.getRiskScore() > 0);
+		boolean includesCoreOption = selectedOptions.stream()
+				.anyMatch(ScenarioOption::isCore);
+
+		return Stream.of(
+						includesRiskOption ? "보안 노출, 단일 장애 지점, 일관성 문제, 비용 낭비 같은 운영 부담을 함께 검토해야 합니다." : "",
+						includesCoreOption ? "핵심 선택지의 효과와 함께 비용, 확장 지연, 장애 시 우회 흐름을 비교해야 합니다." : "",
+						!includesCoreOption ? "남은 병목이 compute, network, storage, security 중 어디에 있는지 다시 좁혀야 합니다." : ""
+				)
+				.filter(text -> !text.isBlank())
+				.toList();
 	}
 
 	private String subjectParticleFor(String text) {
