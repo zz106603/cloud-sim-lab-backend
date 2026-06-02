@@ -44,7 +44,8 @@ public class ScenarioController {
 
 	@GetMapping("/{scenarioId}")
 	public DetailResponse findOne(@PathVariable Long scenarioId) {
-		return DetailResponse.from(getScenarioUseCase.findOne(scenarioId));
+		var scenario = getScenarioUseCase.findOne(scenarioId);
+		return DetailResponse.from(scenario, getScenarioUseCase.findRelatedLearningDocuments(scenario));
 	}
 
 	@PostMapping("/{scenarioId}/simulate")
