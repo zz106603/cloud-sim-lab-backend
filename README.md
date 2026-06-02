@@ -66,6 +66,12 @@ http://localhost:8080/api
 
 local profile에서는 DB가 비어 있을 때 학습 문서와 시나리오 seed가 저장됩니다.
 
+### 학습 콘텐츠 저장 구조
+
+학습 문서 본문은 `src/main/resources/learning-documents/*.md` Markdown 파일로 관리합니다. `LearningDocumentSeed`는 제목, 카테고리, 난이도, 요약, 본문 파일명만 가지고 있고, local profile seed 실행 시 resource 파일을 읽어 기존 `content` 필드에 저장합니다.
+
+본문 파일을 추가하거나 이름을 바꿀 때는 seed 메타데이터의 파일명도 함께 수정해야 합니다. resource 파일을 읽지 못하면 seed 단계에서 진단 가능한 예외가 발생합니다.
+
 ### 3. 테스트
 
 ```bash
