@@ -1,0 +1,1 @@
+Private subnet은 외부 사용자가 직접 접근하면 안 되는 EC2나 RDS를 배치하는 네트워크 영역입니다. 운영 요청 흐름은 Client가 Public subnet의 ALB에 접근하고, ALB가 Private subnet의 EC2로 트래픽을 전달하는 방식이 기본입니다. 이렇게 구성하면 애플리케이션 서버의 인바운드 경로를 ALB로 제한할 수 있어 보안 위험을 줄입니다. 다만 Private subnet의 EC2가 외부 API 호출, 패키지 다운로드, 보안 업데이트를 수행해야 한다면 NAT Gateway나 별도 아웃바운드 경로가 필요합니다. 서브넷 라우팅 테이블이나 Security Group 설정을 잘못하면 필요한 통신이 막혀 배포와 외부 연동이 실패할 수 있습니다.
