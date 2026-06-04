@@ -12,8 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentQueryPort;
-import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
+import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
+import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelations;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.GetScenarioUseCase;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.SimulateScenarioUseCase;
@@ -145,50 +146,43 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 	}
 
 	private List<RelatedLearningDocument> relatedLearningDocumentsFor(Scenario scenario, SimulationResultType resultType) {
-		if (scenario == null) {
+		if (scenario == null || scenario.getGraphKey() == null) {
 			return List.of();
 		}
-		DocumentCategory category = documentCategoryFor(scenario.getCategory());
-		if (category == null) {
-			return List.of();
-		}
-		return learningDocumentQueryPort.findAllByCategory(category).stream()
-				.map(document -> toRelatedLearningDocument(document, resultType))
+		Map<String, LearningDocument> documentsByKey = learningDocumentQueryPort.findAll().stream()
+				.filter(document -> document.getDocumentKey() != null)
+				.collect(Collectors.toMap(LearningDocument::getDocumentKey, Function.identity()));
+
+		return LearningRelations.forScenario(scenario.getGraphKey()).stream()
+				.filter(relation -> documentsByKey.containsKey(relation.documentKey()))
+				.map(relation -> toRelatedLearningDocument(documentsByKey.get(relation.documentKey()), relation, resultType))
 				.toList();
 	}
 
-	private DocumentCategory documentCategoryFor(ScenarioCategory category) {
-		if (category == null) {
-			return null;
-		}
-		return switch (category) {
-			case COMPUTE -> DocumentCategory.COMPUTE;
-			case NETWORK -> DocumentCategory.NETWORK;
-			case STORAGE -> DocumentCategory.STORAGE;
-			case SECURITY -> DocumentCategory.SECURITY;
-		};
-	}
-
-	private RelatedLearningDocument toRelatedLearningDocument(LearningDocument document, SimulationResultType resultType) {
+	private RelatedLearningDocument toRelatedLearningDocument(
+			LearningDocument document,
+			LearningRelation relation,
+			SimulationResultType resultType
+	) {
 		return new RelatedLearningDocument(
 				document.getId(),
 				document.getTitle(),
 				document.getCategory(),
 				document.getLevel(),
 				document.getSummary(),
-				reviewReasonFor(document, resultType)
+				reviewReasonFor(relation, resultType)
 		);
 	}
 
-	private String reviewReasonFor(LearningDocument document, SimulationResultType resultType) {
+	private String reviewReasonFor(LearningRelation relation, SimulationResultType resultType) {
 		if (resultType == null) {
-			return "이 시나리오를 풀기 전에 " + document.getTitle() + "의 판단 기준을 먼저 확인하세요.";
+			return relation.learningReason();
 		}
 		return switch (resultType) {
-			case GOOD -> document.getTitle() + " 관점에서 선택의 비용, 복잡도, 장애 우회 흐름을 복습하세요.";
-			case PARTIAL -> document.getTitle() + "에서 남은 병목이나 빠진 핵심 선택지를 다시 확인하세요.";
-			case RISKY -> document.getTitle() + "의 운영 위험과 보완 조건을 기준으로 선택을 재검토하세요.";
-			case WRONG -> document.getTitle() + "의 기본 판단 기준을 다시 확인한 뒤 문제 원인에 맞는 선택지를 고르세요.";
+			case GOOD -> "복습 초점: " + relation.reviewFocus();
+			case PARTIAL -> "남은 병목과 빠진 선택지를 확인할 초점: " + relation.reviewFocus();
+			case RISKY -> "운영 위험과 보완 조건을 재검토할 초점: " + relation.reviewFocus();
+			case WRONG -> relation.learningReason() + " 먼저 확인할 초점: " + relation.reviewFocus();
 		};
 	}
 
