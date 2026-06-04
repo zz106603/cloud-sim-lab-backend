@@ -66,6 +66,18 @@ http://localhost:8080/api
 
 local profile에서는 DB가 비어 있을 때 학습 문서와 시나리오 seed가 저장됩니다.
 
+### 로컬 DB 초기화
+
+seed 데이터가 변경된 경우 기존 PostgreSQL 볼륨에는 변경 내용이 자동 반영되지 않습니다. 로컬 데이터를 모두 삭제하고 최신 seed를 다시 저장하려면 다음 명령을 실행한 뒤 백엔드를 재시작합니다.
+
+```bash
+docker compose down -v
+docker compose up -d
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
+
+`docker compose down -v`는 로컬 PostgreSQL 데이터를 모두 삭제합니다.
+
 ### 학습 콘텐츠 저장 구조
 
 학습 문서 본문은 `src/main/resources/learning-documents/*.md` Markdown 파일로 관리합니다. `LearningDocumentSeed`는 제목, 카테고리, 난이도, 요약, 본문 파일명만 가지고 있고, local profile seed 실행 시 resource 파일을 읽어 기존 `content` 필드에 저장합니다.
