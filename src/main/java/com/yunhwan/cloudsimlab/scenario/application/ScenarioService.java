@@ -27,6 +27,7 @@ import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationReview;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResult;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
+import com.yunhwan.cloudsimlab.scenario.domain.TradeOffSummary;
 
 @Service
 @Transactional(readOnly = true)
@@ -123,6 +124,7 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				detailFor(scenario, selectedOptions, resultType, hasCoreOptions, includesCoreOption),
 				reviewFor(scenario, selectedOptions, resultType, hasCoreOptions, includesCoreOption),
 				selectedOptions,
+				TradeOffSummary.from(selectedOptions),
 				finalArchitecture,
 				ArchitectureGraphs.finalFor(scenario, selectedOptions),
 				relatedLearningDocumentsFor(scenario, resultType)

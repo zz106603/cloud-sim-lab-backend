@@ -16,6 +16,8 @@ import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationReview;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResult;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
+import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
+import com.yunhwan.cloudsimlab.scenario.domain.TradeOffSummary;
 
 final class ScenarioDtos {
 
@@ -70,9 +72,14 @@ final class ScenarioDtos {
 		}
 	}
 
-	record OptionResponse(Long id, String name, String description) {
+	record OptionResponse(Long id, String name, String description, TradeOffEffectsResponse effects) {
 		static OptionResponse from(ScenarioOption option) {
-			return new OptionResponse(option.getId(), option.getName(), option.getDescription());
+			return new OptionResponse(
+					option.getId(),
+					option.getName(),
+					option.getDescription(),
+					TradeOffEffectsResponse.from(option.getEffects())
+			);
 		}
 	}
 
@@ -88,6 +95,7 @@ final class ScenarioDtos {
 			String detail,
 			ReviewResponse review,
 			List<OptionResponse> selectedOptions,
+			TradeOffSummaryResponse tradeOffSummary,
 			List<String> finalArchitecture,
 			ArchitectureGraphResponse finalArchitectureGraph,
 			List<RelatedLearningDocumentResponse> relatedLearningDocuments
@@ -104,11 +112,52 @@ final class ScenarioDtos {
 					result.getSelectedOptions().stream()
 							.map(OptionResponse::from)
 							.toList(),
+					TradeOffSummaryResponse.from(result.getTradeOffSummary()),
 					result.getFinalArchitecture(),
 					ArchitectureGraphResponse.from(result.getFinalArchitectureGraph()),
 					result.getRelatedLearningDocuments().stream()
 							.map(RelatedLearningDocumentResponse::from)
 							.toList()
+			);
+		}
+	}
+
+	record TradeOffEffectsResponse(
+			int performance,
+			int availability,
+			int cost,
+			int complexity,
+			int consistency,
+			int security
+	) {
+		static TradeOffEffectsResponse from(TradeOffEffects effects) {
+			return new TradeOffEffectsResponse(
+					effects.performance(),
+					effects.availability(),
+					effects.cost(),
+					effects.complexity(),
+					effects.consistency(),
+					effects.security()
+			);
+		}
+	}
+
+	record TradeOffSummaryResponse(
+			int performance,
+			int availability,
+			int cost,
+			int complexity,
+			int consistency,
+			int security
+	) {
+		static TradeOffSummaryResponse from(TradeOffSummary summary) {
+			return new TradeOffSummaryResponse(
+					summary.performance(),
+					summary.availability(),
+					summary.cost(),
+					summary.complexity(),
+					summary.consistency(),
+					summary.security()
 			);
 		}
 	}
