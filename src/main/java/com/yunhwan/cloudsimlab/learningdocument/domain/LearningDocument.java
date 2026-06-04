@@ -3,6 +3,7 @@ package com.yunhwan.cloudsimlab.learningdocument.domain;
 public class LearningDocument {
 
 	private final Long id;
+	private final String documentKey;
 	private final String title;
 	private final DocumentCategory category;
 	private final DocumentLevel level;
@@ -10,7 +11,20 @@ public class LearningDocument {
 	private final String content;
 
 	public LearningDocument(Long id, String title, DocumentCategory category, DocumentLevel level, String summary, String content) {
+		this(id, null, title, category, level, summary, content);
+	}
+
+	public LearningDocument(
+			Long id,
+			String documentKey,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			String content
+	) {
 		this.id = id;
+		this.documentKey = documentKey;
 		this.title = title;
 		this.category = category;
 		this.level = level;
@@ -22,8 +36,23 @@ public class LearningDocument {
 		return new LearningDocument(null, title, category, level, summary, content);
 	}
 
+	public static LearningDocument newDocumentWithKey(
+			String documentKey,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			String content
+	) {
+		return new LearningDocument(null, documentKey, title, category, level, summary, content);
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public String getDocumentKey() {
+		return documentKey;
 	}
 
 	public String getTitle() {
