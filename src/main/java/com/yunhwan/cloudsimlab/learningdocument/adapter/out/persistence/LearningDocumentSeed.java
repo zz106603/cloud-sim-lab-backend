@@ -31,7 +31,8 @@ class LearningDocumentSeed {
 				return;
 			}
 
-			documents().forEach(document -> seedPort.save(LearningDocument.newDocument(
+			documents().forEach(document -> seedPort.save(LearningDocument.newDocumentWithKey(
+					document.documentKey(),
 					document.title(),
 					document.category(),
 					document.level(),
@@ -44,6 +45,7 @@ class LearningDocumentSeed {
 	private List<SeedDocument> documents() {
 		return List.of(
 				new SeedDocument(
+						"ec2-compute-capacity",
 						"EC2와 컴퓨팅 용량",
 						DocumentCategory.COMPUTE,
 						DocumentLevel.BEGINNER,
@@ -51,6 +53,7 @@ class LearningDocumentSeed {
 						"ec2-compute-capacity.md"
 				),
 				new SeedDocument(
+						"private-subnet-application-server",
 						"Private subnet과 애플리케이션 서버",
 						DocumentCategory.NETWORK,
 						DocumentLevel.BEGINNER,
@@ -58,6 +61,7 @@ class LearningDocumentSeed {
 						"private-subnet-application-server.md"
 				),
 				new SeedDocument(
+						"alb-traffic-distribution",
 						"ALB와 트래픽 분산",
 						DocumentCategory.NETWORK,
 						DocumentLevel.BEGINNER,
@@ -65,6 +69,7 @@ class LearningDocumentSeed {
 						"alb-traffic-distribution.md"
 				),
 				new SeedDocument(
+						"auto-scaling-basics",
 						"Auto Scaling 기본",
 						DocumentCategory.COMPUTE,
 						DocumentLevel.INTERMEDIATE,
@@ -72,6 +77,7 @@ class LearningDocumentSeed {
 						"auto-scaling-basics.md"
 				),
 				new SeedDocument(
+						"security-group-least-privilege",
 						"Security Group 최소 허용",
 						DocumentCategory.SECURITY,
 						DocumentLevel.BEGINNER,
@@ -79,6 +85,7 @@ class LearningDocumentSeed {
 						"security-group-least-privilege.md"
 				),
 				new SeedDocument(
+						"rds-connection-management",
 						"RDS와 연결 관리",
 						DocumentCategory.STORAGE,
 						DocumentLevel.BEGINNER,
@@ -86,6 +93,7 @@ class LearningDocumentSeed {
 						"rds-connection-management.md"
 				),
 				new SeedDocument(
+						"rds-multi-az",
 						"RDS Multi-AZ",
 						DocumentCategory.STORAGE,
 						DocumentLevel.INTERMEDIATE,
@@ -93,6 +101,7 @@ class LearningDocumentSeed {
 						"rds-multi-az.md"
 				),
 				new SeedDocument(
+						"read-replica-read-scaling",
 						"Read Replica와 읽기 확장",
 						DocumentCategory.STORAGE,
 						DocumentLevel.INTERMEDIATE,
@@ -100,6 +109,7 @@ class LearningDocumentSeed {
 						"read-replica-read-scaling.md"
 				),
 				new SeedDocument(
+						"redis-cache",
 						"Redis Cache",
 						DocumentCategory.COMPUTE,
 						DocumentLevel.INTERMEDIATE,
@@ -107,6 +117,7 @@ class LearningDocumentSeed {
 						"redis-cache.md"
 				),
 				new SeedDocument(
+						"nat-gateway-outbound-communication",
 						"NAT Gateway와 아웃바운드 통신",
 						DocumentCategory.NETWORK,
 						DocumentLevel.INTERMEDIATE,
@@ -117,6 +128,7 @@ class LearningDocumentSeed {
 	}
 
 	private record SeedDocument(
+			String documentKey,
 			String title,
 			DocumentCategory category,
 			DocumentLevel level,
@@ -124,6 +136,7 @@ class LearningDocumentSeed {
 			String contentFileName
 	) {
 		private SeedDocument {
+			documentKey = requireText(documentKey, "documentKey");
 			title = requireText(title, "title");
 			category = Objects.requireNonNull(category, "Learning document seed category must not be null");
 			level = Objects.requireNonNull(level, "Learning document seed level must not be null");

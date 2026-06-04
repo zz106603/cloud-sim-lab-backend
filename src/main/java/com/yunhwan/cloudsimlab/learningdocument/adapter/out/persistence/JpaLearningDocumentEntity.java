@@ -21,6 +21,9 @@ class JpaLearningDocumentEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@Column(unique = true, length = 80)
+	private String documentKey;
+
 	@Column(nullable = false, length = 120)
 	private String title;
 
@@ -41,7 +44,15 @@ class JpaLearningDocumentEntity {
 	protected JpaLearningDocumentEntity() {
 	}
 
-	private JpaLearningDocumentEntity(String title, DocumentCategory category, DocumentLevel level, String summary, String content) {
+	private JpaLearningDocumentEntity(
+			String documentKey,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			String content
+	) {
+		this.documentKey = documentKey;
 		this.title = title;
 		this.category = category;
 		this.level = level;
@@ -51,6 +62,7 @@ class JpaLearningDocumentEntity {
 
 	static JpaLearningDocumentEntity from(LearningDocument document) {
 		return new JpaLearningDocumentEntity(
+				document.getDocumentKey(),
 				document.getTitle(),
 				document.getCategory(),
 				document.getLevel(),
@@ -60,6 +72,6 @@ class JpaLearningDocumentEntity {
 	}
 
 	LearningDocument toDomain() {
-		return new LearningDocument(id, title, category, level, summary, content);
+		return new LearningDocument(id, documentKey, title, category, level, summary, content);
 	}
 }
