@@ -32,6 +32,7 @@ import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -70,8 +71,10 @@ class ScenarioControllerTests {
 				"트래픽이 늘어나기 전에 EC2 용량을 비교해야 합니다.",
 				List.of("Client", "EC2", "RDS"),
 				List.of(
-						ScenarioOption.newOption("작은 EC2 인스턴스 유지", "비용은 낮지만 용량이 제한적입니다.", 1, false, 0),
-						ScenarioOption.newOption("큰 EC2 인스턴스로 변경", "용량은 늘어나지만 비용도 증가합니다.", 2, true, 0)
+						ScenarioOption.newOption("작은 EC2 인스턴스 유지", "비용은 낮지만 용량이 제한적입니다.", 1, false, 0,
+								new TradeOffEffects(0, -2, 2, 2, 0, 0)),
+						ScenarioOption.newOption("큰 EC2 인스턴스로 변경", "용량은 늘어나지만 비용도 증가합니다.", 2, true, 0,
+								new TradeOffEffects(2, -1, -2, 1, 0, 0))
 				)
 		));
 		networkScenario = seedPort.save(Scenario.newScenario(
@@ -133,6 +136,12 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.options", hasSize(2)))
 				.andExpect(jsonPath("$.options[0].name").value("작은 EC2 인스턴스 유지"))
 				.andExpect(jsonPath("$.options[0].description").value("비용은 낮지만 용량이 제한적입니다."))
+				.andExpect(jsonPath("$.options[0].effects.performance").value(0))
+				.andExpect(jsonPath("$.options[0].effects.availability").value(-2))
+				.andExpect(jsonPath("$.options[0].effects.cost").value(2))
+				.andExpect(jsonPath("$.options[0].effects.complexity").value(2))
+				.andExpect(jsonPath("$.options[0].effects.consistency").value(0))
+				.andExpect(jsonPath("$.options[0].effects.security").value(0))
 				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].reviewReason").value(
@@ -181,6 +190,13 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.review.nextStep").value("다음으로 비용, 확장 지연, 장애 시 우회 흐름을 함께 확인하세요."))
 				.andExpect(jsonPath("$.selectedOptions", hasSize(1)))
 				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId))
+				.andExpect(jsonPath("$.selectedOptions[0].effects.performance").value(2))
+				.andExpect(jsonPath("$.tradeOffSummary.performance").value(2))
+				.andExpect(jsonPath("$.tradeOffSummary.availability").value(-1))
+				.andExpect(jsonPath("$.tradeOffSummary.cost").value(-2))
+				.andExpect(jsonPath("$.tradeOffSummary.complexity").value(1))
+				.andExpect(jsonPath("$.tradeOffSummary.consistency").value(0))
+				.andExpect(jsonPath("$.tradeOffSummary.security").value(0))
 				.andExpect(jsonPath("$.finalArchitecture", hasSize(3)))
 				.andExpect(jsonPath("$.finalArchitecture[1]").value("EC2"))
 				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
@@ -306,7 +322,14 @@ class ScenarioControllerTests {
 				"조회 요청 증가로 RDS CPU가 상승했습니다.",
 				List.of("Client", "EC2", "RDS"),
 				List.of(
-						ScenarioOption.newOption("ALB만 추가", "진입점은 정리되지만 RDS 조회 병목은 줄이지 못합니다.", 0, false, 0)
+						ScenarioOption.newOption(
+								"ALB만 추가",
+								"진입점은 정리되지만 RDS 조회 병목은 줄이지 못합니다.",
+								0,
+								false,
+								0,
+								new TradeOffEffects(3, 3, 3, 3, 3, 3)
+						)
 				)
 		));
 		Long wrongOptionId = wrongScenario.getOptions().getFirst().getId();
@@ -320,6 +343,7 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.resultType").value("WRONG"))
 				.andExpect(jsonPath("$.score").value(0))
 				.andExpect(jsonPath("$.riskScore").value(0))
+				.andExpect(jsonPath("$.tradeOffSummary.performance").value(3))
 				.andExpect(jsonPath("$.detail", containsString("원인을 직접 줄이는 선택지가 포함되지 않았습니다.")))
 				.andExpect(jsonPath("$.detail", containsString("점수가 없는 선택지")));
 	}
@@ -420,7 +444,11 @@ class ScenarioControllerTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.selectedOptions", hasSize(2)))
 				.andExpect(jsonPath("$.selectedOptions[0].id").value(firstSelectedOptionId))
-				.andExpect(jsonPath("$.selectedOptions[1].id").value(secondSelectedOptionId));
+				.andExpect(jsonPath("$.selectedOptions[1].id").value(secondSelectedOptionId))
+				.andExpect(jsonPath("$.tradeOffSummary.performance").value(2))
+				.andExpect(jsonPath("$.tradeOffSummary.availability").value(-3))
+				.andExpect(jsonPath("$.tradeOffSummary.cost").value(0))
+				.andExpect(jsonPath("$.tradeOffSummary.complexity").value(3));
 	}
 
 	@Test
