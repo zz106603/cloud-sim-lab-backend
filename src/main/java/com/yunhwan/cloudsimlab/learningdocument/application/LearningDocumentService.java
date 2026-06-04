@@ -1,18 +1,20 @@
 package com.yunhwan.cloudsimlab.learningdocument.application;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.yunhwan.cloudsimlab.learningdocument.application.port.in.GetLearningDocumentUseCase;
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentQueryPort;
-import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
+import com.yunhwan.cloudsimlab.learningdocument.domain.RelatedScenario;
+import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelations;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
-import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 
 @Service
 @Transactional(readOnly = true)
@@ -38,21 +40,20 @@ public class LearningDocumentService implements GetLearningDocumentUseCase {
 	}
 
 	@Override
-	public List<Scenario> findRelatedScenarios(DocumentCategory category) {
-		return scenarioCategoryFor(category)
-				.map(scenarioCategory -> scenarioQueryPort.findAll(scenarioCategory, null))
-				.orElseGet(List::of);
-	}
-
-	private Optional<ScenarioCategory> scenarioCategoryFor(DocumentCategory category) {
-		if (category == null) {
-			return Optional.empty();
+	public List<RelatedScenario> findRelatedScenarios(LearningDocument document) {
+		if (document == null || document.getDocumentKey() == null) {
+			return List.of();
 		}
-		return switch (category) {
-			case COMPUTE -> Optional.of(ScenarioCategory.COMPUTE);
-			case NETWORK -> Optional.of(ScenarioCategory.NETWORK);
-			case STORAGE -> Optional.of(ScenarioCategory.STORAGE);
-			case SECURITY -> Optional.of(ScenarioCategory.SECURITY);
-		};
+		Map<String, Scenario> scenariosByKey = scenarioQueryPort.findAll(null, null).stream()
+				.filter(scenario -> scenario.getGraphKey() != null)
+				.collect(Collectors.toMap(Scenario::getGraphKey, Function.identity()));
+
+		return LearningRelations.forDocument(document.getDocumentKey()).stream()
+				.filter(relation -> scenariosByKey.containsKey(relation.scenarioKey()))
+				.map(relation -> new RelatedScenario(
+						scenariosByKey.get(relation.scenarioKey()),
+						relation.learningReason()
+				))
+				.toList();
 	}
 }
