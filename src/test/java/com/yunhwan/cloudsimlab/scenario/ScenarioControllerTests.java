@@ -53,14 +53,16 @@ class ScenarioControllerTests {
 
 	@BeforeEach
 	void setUp() {
-		computeDocument = learningDocumentSeedPort.save(LearningDocument.newDocument(
+		computeDocument = learningDocumentSeedPort.save(LearningDocument.newDocumentWithKey(
+				"ec2-compute-capacity",
 				"Virtual machines and compute capacity",
 				DocumentCategory.COMPUTE,
 				DocumentLevel.BEGINNER,
 				"Understand compute capacity.",
 				"Virtual machines run application workloads on configurable CPU and memory resources."
 		));
-		computeScenario = seedPort.save(Scenario.newScenario(
+		computeScenario = seedPort.save(Scenario.newScenarioWithGraphKey(
+				"single-spring-boot",
 				"웹 서비스 확장",
 				ScenarioCategory.COMPUTE,
 				ScenarioLevel.BEGINNER,
@@ -134,7 +136,7 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].reviewReason").value(
-						"이 시나리오를 풀기 전에 Virtual machines and compute capacity의 판단 기준을 먼저 확인하세요."
+						"단일 EC2의 용량 한계와 단일 장애 지점을 판단하는 데 필요한 문서입니다."
 				));
 	}
 
@@ -185,8 +187,43 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].title").value("Virtual machines and compute capacity"))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].reviewReason").value(
-						"Virtual machines and compute capacity 관점에서 선택의 비용, 복잡도, 장애 우회 흐름을 복습하세요."
+						"복습 초점: scale-up과 scale-out이 용량과 장애 대응에 만드는 차이"
 				));
+	}
+
+	@Test
+	void 시나리오_상세는_같은_카테고리여도_명시적으로_연결되지_않은_문서를_제외한다() throws Exception {
+		learningDocumentSeedPort.save(LearningDocument.newDocumentWithKey(
+				"unrelated-compute-document",
+				"관련 없는 컴퓨팅 문서",
+				DocumentCategory.COMPUTE,
+				DocumentLevel.BEGINNER,
+				"다른 학습 목표를 설명합니다.",
+				"문서 본문"
+		));
+
+		mockMvc.perform(get("/api/scenarios/{scenarioId}", computeScenario.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(1)))
+				.andExpect(jsonPath("$.relatedLearningDocuments[0].id").value(computeDocument.getId()));
+	}
+
+	@Test
+	void 시나리오_상세는_명시적_연결_대상이_없으면_빈_관련_문서를_반환한다() throws Exception {
+		Scenario scenarioWithoutRelations = seedPort.save(Scenario.newScenarioWithGraphKey(
+				"scenario-without-relations",
+				"연결 없는 시나리오",
+				ScenarioCategory.COMPUTE,
+				ScenarioLevel.BEGINNER,
+				"독립된 학습 목표입니다.",
+				"관련 문서가 아직 없는 시나리오입니다.",
+				List.of(),
+				List.of(ScenarioOption.newOption("선택지", "설명"))
+		));
+
+		mockMvc.perform(get("/api/scenarios/{scenarioId}", scenarioWithoutRelations.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(0)));
 	}
 
 	@Test
