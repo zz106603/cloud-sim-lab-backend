@@ -149,11 +149,19 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		if (scenario == null || scenario.getGraphKey() == null) {
 			return List.of();
 		}
-		Map<String, LearningDocument> documentsByKey = learningDocumentQueryPort.findAll().stream()
+		List<LearningRelation> relations = LearningRelations.forScenario(scenario.getGraphKey());
+		if (relations.isEmpty()) {
+			return List.of();
+		}
+		List<String> documentKeys = relations.stream()
+				.map(LearningRelation::documentKey)
+				.distinct()
+				.toList();
+		Map<String, LearningDocument> documentsByKey = learningDocumentQueryPort.findAllByDocumentKeyIn(documentKeys).stream()
 				.filter(document -> document.getDocumentKey() != null)
 				.collect(Collectors.toMap(LearningDocument::getDocumentKey, Function.identity()));
 
-		return LearningRelations.forScenario(scenario.getGraphKey()).stream()
+		return relations.stream()
 				.filter(relation -> documentsByKey.containsKey(relation.documentKey()))
 				.map(relation -> toRelatedLearningDocument(documentsByKey.get(relation.documentKey()), relation, resultType))
 				.toList();

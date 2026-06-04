@@ -14,4 +14,6 @@ interface JpaScenarioRepository extends JpaRepository<JpaScenarioEntity, Long> {
 	List<JpaScenarioEntity> findByLevel(ScenarioLevel level);
 
 	List<JpaScenarioEntity> findByCategoryAndLevel(ScenarioCategory category, ScenarioLevel level);
+
+	List<JpaScenarioEntity> findByGraphKeyIn(List<String> graphKeys);
 }

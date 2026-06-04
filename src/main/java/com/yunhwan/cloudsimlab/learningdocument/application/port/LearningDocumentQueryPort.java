@@ -9,5 +9,7 @@ public interface LearningDocumentQueryPort {
 
 	List<LearningDocument> findAll();
 
+	List<LearningDocument> findAllByDocumentKeyIn(List<String> documentKeys);
+
 	Optional<LearningDocument> findById(Long documentId);
 }
