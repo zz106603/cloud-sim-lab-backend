@@ -11,5 +11,7 @@ public interface ScenarioQueryPort {
 
 	List<Scenario> findAll(ScenarioCategory category, ScenarioLevel level);
 
+	List<Scenario> findAllByGraphKeyIn(List<String> graphKeys);
+
 	Optional<Scenario> findById(Long scenarioId);
 }

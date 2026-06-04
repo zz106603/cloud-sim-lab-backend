@@ -27,6 +27,14 @@ class LearningDocumentPersistenceAdapter implements LearningDocumentQueryPort, L
 	}
 
 	@Override
+	public List<LearningDocument> findAllByDocumentKeyIn(List<String> documentKeys) {
+		return repository.findByDocumentKeyIn(documentKeys)
+				.stream()
+				.map(JpaLearningDocumentEntity::toDomain)
+				.toList();
+	}
+
+	@Override
 	public Optional<LearningDocument> findById(Long documentId) {
 		return repository.findById(documentId)
 				.map(JpaLearningDocumentEntity::toDomain);

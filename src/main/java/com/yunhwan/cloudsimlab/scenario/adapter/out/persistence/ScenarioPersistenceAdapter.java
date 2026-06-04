@@ -29,6 +29,14 @@ class ScenarioPersistenceAdapter implements ScenarioQueryPort, ScenarioSeedPort 
 	}
 
 	@Override
+	public List<Scenario> findAllByGraphKeyIn(List<String> graphKeys) {
+		return repository.findByGraphKeyIn(graphKeys)
+				.stream()
+				.map(JpaScenarioEntity::toDomain)
+				.toList();
+	}
+
+	@Override
 	public Optional<Scenario> findById(Long scenarioId) {
 		return repository.findById(scenarioId)
 				.map(JpaScenarioEntity::toDomain);

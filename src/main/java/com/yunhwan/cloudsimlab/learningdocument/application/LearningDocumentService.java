@@ -12,6 +12,7 @@ import com.yunhwan.cloudsimlab.learningdocument.application.port.in.GetLearningD
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentQueryPort;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 import com.yunhwan.cloudsimlab.learningdocument.domain.RelatedScenario;
+import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelations;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
@@ -44,11 +45,19 @@ public class LearningDocumentService implements GetLearningDocumentUseCase {
 		if (document == null || document.getDocumentKey() == null) {
 			return List.of();
 		}
-		Map<String, Scenario> scenariosByKey = scenarioQueryPort.findAll(null, null).stream()
+		List<LearningRelation> relations = LearningRelations.forDocument(document.getDocumentKey());
+		if (relations.isEmpty()) {
+			return List.of();
+		}
+		List<String> scenarioKeys = relations.stream()
+				.map(LearningRelation::scenarioKey)
+				.distinct()
+				.toList();
+		Map<String, Scenario> scenariosByKey = scenarioQueryPort.findAllByGraphKeyIn(scenarioKeys).stream()
 				.filter(scenario -> scenario.getGraphKey() != null)
 				.collect(Collectors.toMap(Scenario::getGraphKey, Function.identity()));
 
-		return LearningRelations.forDocument(document.getDocumentKey()).stream()
+		return relations.stream()
 				.filter(relation -> scenariosByKey.containsKey(relation.scenarioKey()))
 				.map(relation -> new RelatedScenario(
 						scenariosByKey.get(relation.scenarioKey()),
