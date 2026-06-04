@@ -189,9 +189,25 @@ curl -X POST http://localhost:8080/api/scenarios/1/simulate \
     {
       "id": 2,
       "name": "ALB와 Auto Scaling 추가",
-      "description": "비용과 설정 복잡도는 늘지만 트래픽 분산과 장애 우회가 가능해집니다."
+      "description": "비용과 설정 복잡도는 늘지만 트래픽 분산과 장애 우회가 가능해집니다.",
+      "effects": {
+        "performance": 3,
+        "availability": 3,
+        "cost": -2,
+        "complexity": -2,
+        "consistency": 0,
+        "security": 1
+      }
     }
   ],
+  "tradeOffSummary": {
+    "performance": 3,
+    "availability": 3,
+    "cost": -2,
+    "complexity": -2,
+    "consistency": 0,
+    "security": 1
+  },
   "finalArchitecture": ["Client", "EC2", "RDS", "ALB", "Auto Scaling"],
   "finalArchitectureGraph": {
     "nodes": [
@@ -223,6 +239,8 @@ curl -X POST http://localhost:8080/api/scenarios/1/simulate \
 - `core=true`는 시나리오의 핵심 병목이나 장애 원인을 직접 해결하는 선택지라는 뜻입니다.
 - 핵심 선택지가 있는 시나리오에서는 핵심 선택지 중 하나를 고르면 `GOOD` 후보가 되고, 유효하지만 핵심이 아니면 `PARTIAL`로 판단합니다.
 - 핵심 선택지가 없는 시나리오는 유효한 선택지만으로 `GOOD`이 될 수 있습니다.
+- `effects`는 `performance`, `availability`, `cost`, `complexity`, `consistency`, `security` 관점의 고정 효과입니다. 값은 `-3`부터 `3`이며 양수는 이점, 음수는 부담을 뜻합니다. `cost`와 `complexity`의 양수는 비용과 복잡도가 줄어드는 효과입니다.
+- `tradeOffSummary`는 중복을 제거한 선택지들의 효과를 차원별로 단순 합산합니다. 이 요약은 비교와 설명에만 사용하며 기존 결과 타입 판정에는 영향을 주지 않습니다.
 
 ## 아키텍처 시각화 예시
 
@@ -324,7 +342,6 @@ src/main/java/com/yunhwan/cloudsimlab
 ## 향후 확장 방향
 
 - 프론트엔드/백엔드 응답 DTO 계약 정리
-- 선택지별 효과 지표(`performance`, `availability`, `cost` 등) 응답 확장
 - 시나리오별 관련 문서 ID 명시화
 - 아키텍처 노드/엣지 모델 도입 검토
 - 사용자별 풀이 이력 저장

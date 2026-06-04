@@ -230,6 +230,14 @@ Read Replica 추가도 조회 트래픽 분산에 도움이 된다.
 | consistency | 데이터 정합성 영향 |
 | security | 보안 구조 개선 |
 
+각 선택지의 효과 값은 `-3`부터 `3`까지다.
+
+- 양수는 해당 관점에서 이점이 커지는 것을 뜻한다. `cost`, `complexity`의 양수는 비용이나 운영 복잡도가 줄어드는 효과다.
+- 음수는 해당 관점에서 부담이나 위험이 커지는 것을 뜻한다.
+- `0`은 직접적인 영향이 없거나 현재 학습 범위에서 중립임을 뜻한다.
+- 여러 선택지를 고르면 각 차원 값을 단순 합산해 `tradeOffSummary`로 제공한다. 선택지 중복은 제거하므로 같은 입력은 항상 같은 요약을 반환한다.
+- trade-off 효과는 비교와 설명을 위한 데이터다. `GOOD/PARTIAL/RISKY/WRONG` 판정은 기존 `score`, `riskScore`, `core` 규칙으로 결정한다.
+
 ---
 
 # 8. 시나리오 데이터 구조
@@ -251,7 +259,7 @@ Read Replica 추가도 조회 트래픽 분산에 도움이 된다.
       "id": "add-redis",
       "label": "Redis Cache 추가",
       "effects": {
-        "performance": 4,
+        "performance": 3,
         "availability": 1,
         "cost": -2,
         "complexity": -2,
@@ -434,6 +442,8 @@ EC2
 | scenarioId | 시나리오 ID |
 | selectedOptionIds | 사용자 선택지 |
 | resultType | GOOD / PARTIAL / RISKY / WRONG |
+| selectedOptions.effects | 선택한 선택지별 6개 trade-off 효과 |
+| tradeOffSummary | 선택한 효과를 차원별로 합산한 요약 |
 | summary | 결과 요약 |
 | detailFeedback | 상세 피드백 |
 | finalArchitecture | 변경 후 아키텍처 |
