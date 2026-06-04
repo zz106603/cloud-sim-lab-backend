@@ -12,6 +12,7 @@ public class SimulationResult {
 	private final String detail;
 	private final SimulationReview review;
 	private final List<ScenarioOption> selectedOptions;
+	private final TradeOffSummary tradeOffSummary;
 	private final List<String> finalArchitecture;
 	private final ArchitectureGraph finalArchitectureGraph;
 	private final List<RelatedLearningDocument> relatedLearningDocuments;
@@ -25,6 +26,7 @@ public class SimulationResult {
 			String detail,
 			SimulationReview review,
 			List<ScenarioOption> selectedOptions,
+			TradeOffSummary tradeOffSummary,
 			List<String> finalArchitecture,
 			ArchitectureGraph finalArchitectureGraph,
 			List<RelatedLearningDocument> relatedLearningDocuments
@@ -37,6 +39,7 @@ public class SimulationResult {
 		this.detail = detail;
 		this.review = review == null ? new SimulationReview("", List.of(), List.of(), List.of(), "") : review;
 		this.selectedOptions = selectedOptions == null ? List.of() : List.copyOf(selectedOptions);
+		this.tradeOffSummary = tradeOffSummary == null ? TradeOffSummary.from(this.selectedOptions) : tradeOffSummary;
 		this.finalArchitecture = finalArchitecture == null ? List.of() : List.copyOf(finalArchitecture);
 		this.finalArchitectureGraph = finalArchitectureGraph == null ? new ArchitectureGraph(List.of(), List.of()) : finalArchitectureGraph;
 		this.relatedLearningDocuments = relatedLearningDocuments == null ? List.of() : List.copyOf(relatedLearningDocuments);
@@ -72,6 +75,10 @@ public class SimulationResult {
 
 	public List<ScenarioOption> getSelectedOptions() {
 		return selectedOptions;
+	}
+
+	public TradeOffSummary getTradeOffSummary() {
+		return tradeOffSummary;
 	}
 
 	public List<String> getFinalArchitecture() {
