@@ -5,6 +5,7 @@ import java.util.List;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
+import com.yunhwan.cloudsimlab.learningdocument.domain.RelatedScenario;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
@@ -35,7 +36,7 @@ final class LearningDocumentDtos {
 			String content,
 			List<RelatedScenarioResponse> relatedScenarios
 	) {
-		static DetailResponse from(LearningDocument document, List<Scenario> relatedScenarios) {
+		static DetailResponse from(LearningDocument document, List<RelatedScenario> relatedScenarios) {
 			return new DetailResponse(
 					document.getId(),
 					document.getTitle(),
@@ -44,7 +45,7 @@ final class LearningDocumentDtos {
 					document.getSummary(),
 					document.getContent(),
 					relatedScenarios.stream()
-							.map(scenario -> RelatedScenarioResponse.from(document, scenario))
+							.map(RelatedScenarioResponse::from)
 							.toList()
 			);
 		}
@@ -58,14 +59,15 @@ final class LearningDocumentDtos {
 			String summary,
 			String reason
 	) {
-		static RelatedScenarioResponse from(LearningDocument document, Scenario scenario) {
+		static RelatedScenarioResponse from(RelatedScenario relatedScenario) {
+			Scenario scenario = relatedScenario.scenario();
 			return new RelatedScenarioResponse(
 					scenario.getId(),
 					scenario.getTitle(),
 					scenario.getCategory(),
 					scenario.getLevel(),
 					scenario.getSummary(),
-					"이 문서의 '" + document.getTitle() + "' 개념을 " + scenario.getTitle() + " 상황에서 판단해 볼 수 있습니다."
+					relatedScenario.reason()
 			);
 		}
 	}

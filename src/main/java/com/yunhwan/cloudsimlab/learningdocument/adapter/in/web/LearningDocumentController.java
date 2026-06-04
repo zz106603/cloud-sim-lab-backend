@@ -35,7 +35,7 @@ public class LearningDocumentController {
 		LearningDocument document = getLearningDocumentUseCase.findOne(documentId);
 		return DetailResponse.from(
 				document,
-				getLearningDocumentUseCase.findRelatedScenarios(document.getCategory())
+				getLearningDocumentUseCase.findRelatedScenarios(document)
 		);
 	}
 }
