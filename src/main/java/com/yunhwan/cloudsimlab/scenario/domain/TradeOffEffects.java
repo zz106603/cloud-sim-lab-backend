@@ -28,7 +28,9 @@ public record TradeOffEffects(
 
 	private static void validate(String dimension, int value) {
 		if (value < MIN_EFFECT || value > MAX_EFFECT) {
-			throw new IllegalArgumentException(dimension + " effect must be between -3 and 3");
+			throw new IllegalArgumentException(
+					dimension + " effect must be between " + MIN_EFFECT + " and " + MAX_EFFECT
+			);
 		}
 	}
 }

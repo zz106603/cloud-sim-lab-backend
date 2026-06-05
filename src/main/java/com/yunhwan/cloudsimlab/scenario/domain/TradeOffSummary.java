@@ -13,13 +13,23 @@ public record TradeOffSummary(
 
 	public static TradeOffSummary from(List<ScenarioOption> options) {
 		List<ScenarioOption> selectedOptions = options == null ? List.of() : options;
-		return new TradeOffSummary(
-				selectedOptions.stream().map(ScenarioOption::getEffects).mapToInt(TradeOffEffects::performance).sum(),
-				selectedOptions.stream().map(ScenarioOption::getEffects).mapToInt(TradeOffEffects::availability).sum(),
-				selectedOptions.stream().map(ScenarioOption::getEffects).mapToInt(TradeOffEffects::cost).sum(),
-				selectedOptions.stream().map(ScenarioOption::getEffects).mapToInt(TradeOffEffects::complexity).sum(),
-				selectedOptions.stream().map(ScenarioOption::getEffects).mapToInt(TradeOffEffects::consistency).sum(),
-				selectedOptions.stream().map(ScenarioOption::getEffects).mapToInt(TradeOffEffects::security).sum()
-		);
+		int performance = 0;
+		int availability = 0;
+		int cost = 0;
+		int complexity = 0;
+		int consistency = 0;
+		int security = 0;
+
+		for (ScenarioOption option : selectedOptions) {
+			TradeOffEffects effects = option.getEffects();
+			performance += effects.performance();
+			availability += effects.availability();
+			cost += effects.cost();
+			complexity += effects.complexity();
+			consistency += effects.consistency();
+			security += effects.security();
+		}
+
+		return new TradeOffSummary(performance, availability, cost, complexity, consistency, security);
 	}
 }
