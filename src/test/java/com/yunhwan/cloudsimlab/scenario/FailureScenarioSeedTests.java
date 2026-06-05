@@ -1,5 +1,6 @@
 package com.yunhwan.cloudsimlab.scenario;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -28,7 +29,9 @@ import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumen
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 import com.yunhwan.cloudsimlab.scenario.adapter.out.persistence.ScenarioSeedCatalog;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioSeedPort;
+import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraphs;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -96,10 +99,34 @@ class FailureScenarioSeedTests {
 	}
 
 	@Test
+	void 장애_시나리오_핵심_대응_그래프는_중복되거나_오해되는_요소를_남기지_않는다() {
+		for (String graphKey : FAILURE_SCENARIO_KEYS) {
+			Scenario scenario = scenariosByGraphKey.get(graphKey);
+			ScenarioOption coreOption = option(scenario, ScenarioOption::isCore);
+
+			List<String> edgeKeys = ArchitectureGraphs.finalFor(scenario, List.of(coreOption)).edges().stream()
+					.map(edge -> edge.source() + "->" + edge.target())
+					.toList();
+
+			assertThat(edgeKeys)
+					.as(graphKey + " final graph source-target edges")
+					.doesNotHaveDuplicates();
+		}
+
+		Scenario securityScenario = scenariosByGraphKey.get("security-group-misconfiguration");
+		ScenarioOption coreOption = option(securityScenario, ScenarioOption::isCore);
+
+		assertThat(ArchitectureGraphs.finalFor(securityScenario, List.of(coreOption)).nodes())
+				.extracting(node -> node.id())
+				.doesNotContain("security-group")
+				.contains("alb-security-group", "ec2-security-group", "rds-security-group");
+	}
+
+	@Test
 	void 장애_시나리오는_PARTIAL_RISKY_WRONG_선택을_구분한다() throws Exception {
 		Scenario redisScenario = scenariosByGraphKey.get("redis-failure-fallback");
-		Long partialOptionId = redisScenario.getOptions().get(1).getId();
-		Long wrongOptionId = redisScenario.getOptions().get(2).getId();
+		Long partialOptionId = optionId(redisScenario, option -> option.getScore() > 0 && !option.isCore() && option.getRiskScore() == 1);
+		Long wrongOptionId = optionId(redisScenario, option -> option.getScore() == 0);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", redisScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -120,7 +147,7 @@ class FailureScenarioSeedTests {
 				.andExpect(jsonPath("$.detail", containsString("원인을 직접 줄이는 선택지가 포함되지 않았습니다.")));
 
 		Scenario securityScenario = scenariosByGraphKey.get("security-group-misconfiguration");
-		Long riskyOptionId = securityScenario.getOptions().get(2).getId();
+		Long riskyOptionId = optionId(securityScenario, option -> option.getRiskScore() == 3);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", securityScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -135,7 +162,7 @@ class FailureScenarioSeedTests {
 
 	private void assertCoreOptionGood(String graphKey, String expectedNodeId) throws Exception {
 		Scenario scenario = scenariosByGraphKey.get(graphKey);
-		Long coreOptionId = scenario.getOptions().getFirst().getId();
+		Long coreOptionId = optionId(scenario, ScenarioOption::isCore);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", scenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -147,6 +174,17 @@ class FailureScenarioSeedTests {
 				.andExpect(jsonPath("$.selectedOptions[0].id").value(coreOptionId))
 				.andExpect(jsonPath("$.relatedLearningDocuments", hasSize(greaterThanOrEqualTo(1))))
 				.andExpect(jsonPath("$.finalArchitectureGraph.nodes[?(@.id == '%s')]".formatted(expectedNodeId), hasSize(1)));
+	}
+
+	private Long optionId(Scenario scenario, java.util.function.Predicate<ScenarioOption> predicate) {
+		return option(scenario, predicate).getId();
+	}
+
+	private ScenarioOption option(Scenario scenario, java.util.function.Predicate<ScenarioOption> predicate) {
+		return scenario.getOptions().stream()
+				.filter(predicate)
+				.findFirst()
+				.orElseThrow();
 	}
 
 	private void saveDocument(SeedDocument document) {
