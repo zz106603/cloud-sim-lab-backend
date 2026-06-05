@@ -17,7 +17,12 @@ public final class ArchitectureGraphs {
 			"rds-failure::enable-multi-az",
 			"rds-failure::add-read-replica",
 			"read-heavy-performance::add-read-replica",
-			"read-heavy-performance::add-redis-cache"
+			"read-heavy-performance::add-redis-cache",
+			"redis-failure-fallback::add-cache-fallback-guard",
+			"rds-connection-pool-exhaustion::tune-connection-pool-limits",
+			"alb-health-check-failure::fix-health-check-path",
+			"private-subnet-nat-missing::add-nat-gateway-route",
+			"security-group-misconfiguration::fix-security-group-references"
 	);
 
 	private ArchitectureGraphs() {
@@ -68,6 +73,11 @@ public final class ArchitectureGraphs {
 			case "rds-failure::add-read-replica",
 					"read-heavy-performance::add-read-replica" -> addReadReplicaPath(nodesById, edges);
 			case "read-heavy-performance::add-redis-cache" -> addRedisPath(nodesById, edges);
+			case "redis-failure-fallback::add-cache-fallback-guard" -> addCacheFallbackGuardPath(nodesById, edges);
+			case "rds-connection-pool-exhaustion::tune-connection-pool-limits" -> addConnectionPoolGuardPath(nodesById, edges);
+			case "alb-health-check-failure::fix-health-check-path" -> addHealthCheckPath(nodesById, edges);
+			case "private-subnet-nat-missing::add-nat-gateway-route" -> addNatGatewayPath(nodesById, edges);
+			case "security-group-misconfiguration::fix-security-group-references" -> addSecurityGroupPath(nodesById, edges);
 			default -> {
 			}
 		}
@@ -123,6 +133,38 @@ public final class ArchitectureGraphs {
 	private static void addRedisPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
 		addNode(nodesById, "Redis");
 		addEdge(edges, "EC2", "Redis", "캐시 조회");
+	}
+
+	private static void addCacheFallbackGuardPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "Redis");
+		addNode(nodesById, "RDS Fallback Guard");
+		addNode(nodesById, "RDS");
+		addEdge(edges, "EC2", "Redis", "캐시 조회");
+		addEdge(edges, "EC2", "RDS Fallback Guard", "제한된 fallback");
+		addEdge(edges, "RDS Fallback Guard", "RDS", "보호된 조회");
+	}
+
+	private static void addConnectionPoolGuardPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "Connection Pool");
+		addNode(nodesById, "RDS");
+		addEdge(edges, "EC2", "Connection Pool", "제한된 연결");
+		addEdge(edges, "Connection Pool", "RDS", "쿼리 실행");
+	}
+
+	private static void addHealthCheckPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "ALB");
+		addNode(nodesById, "Health Check");
+		addNode(nodesById, "EC2");
+		addEdge(edges, "ALB", "Health Check", "readiness 확인");
+		addEdge(edges, "Health Check", "EC2", "정상 target 판정");
+	}
+
+	private static void addSecurityGroupPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		addNode(nodesById, "ALB Security Group");
+		addNode(nodesById, "EC2 Security Group");
+		addNode(nodesById, "RDS Security Group");
+		addEdge(edges, "ALB Security Group", "EC2 Security Group", "애플리케이션 포트 허용");
+		addEdge(edges, "EC2 Security Group", "RDS Security Group", "DB 포트 허용");
 	}
 
 	private static void addNode(Map<String, ArchitectureNode> nodesById, String label) {

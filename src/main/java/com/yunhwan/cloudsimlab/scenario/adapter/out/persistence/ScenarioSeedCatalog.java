@@ -97,8 +97,93 @@ public final class ScenarioSeedCatalog {
 								ScenarioOption.newOption("EC2만 증설", "애플리케이션 처리 여유는 늘지만 RDS CPU와 쿼리 시간 병목은 그대로 남을 수 있습니다.", 1, false, 1,
 										effects(0, 1, -2, 1, 0, 0))
 						)
+				),
+				Scenario.newScenarioWithGraphKey(
+						"redis-failure-fallback",
+						"Redis 장애와 RDS fallback 부하 급증",
+						ScenarioCategory.STORAGE,
+						ScenarioLevel.INTERMEDIATE,
+						"Redis 장애 시 RDS fallback 부하가 서비스 장애로 확산되지 않게 대응합니다.",
+						"Redis 연결 실패가 증가하면서 캐시 hit율이 급락했고 모든 조회가 RDS로 우회되고 있습니다. RDS CPU와 connection 수가 함께 상승하며 API 응답 시간이 길어집니다. 캐시 장애를 우회하되 RDS를 보호할 제한, TTL 분산, 재시도 제어를 함께 판단해야 합니다.",
+						List.of("Client", "ALB", "EC2", "Redis", "RDS"),
+						List.of(
+								ScenarioOption.newOptionWithGraphKey("add-cache-fallback-guard", "Redis 장애 우회와 RDS 보호 장치 적용", "캐시 실패 시 제한된 RDS fallback, 짧은 타임아웃, TTL 분산으로 기능은 유지하면서 RDS 포화를 막습니다.", 3, true, 0,
+										effects(1, 3, -1, -2, 1, 0)),
+								ScenarioOption.newOption("Redis 재시작만 수행", "캐시 복구에는 도움이 될 수 있지만 장애 중 몰린 RDS fallback과 재시도 폭증을 제어하지 못합니다.", 1, false, 1,
+										effects(1, 0, 1, 1, 0, 0)),
+								ScenarioOption.newOption("EC2 인스턴스만 증설", "애플리케이션 처리량은 늘 수 있지만 캐시 장애로 RDS에 몰리는 조회 부하는 줄이지 못합니다.", 0, false, 1,
+										effects(1, 0, -2, 1, 0, 0))
+						)
+				),
+				Scenario.newScenarioWithGraphKey(
+						"rds-connection-pool-exhaustion",
+						"RDS Connection Pool 고갈",
+						ScenarioCategory.STORAGE,
+						ScenarioLevel.INTERMEDIATE,
+						"연결 대기와 DB 포화 지표를 함께 보고 커넥션 풀 고갈을 완화합니다.",
+						"API timeout이 늘고 Hikari active connection이 최대치에 붙어 있으며 요청 대기 시간이 증가합니다. RDS CPU는 높지만 연결 수와 느린 쿼리도 함께 증가했습니다. 풀 크기를 무작정 키우기보다 쿼리 시간, 트랜잭션 범위, RDS 보호 한계를 함께 판단해야 합니다.",
+						List.of("Client", "ALB", "EC2", "Connection Pool", "RDS"),
+						List.of(
+								ScenarioOption.newOptionWithGraphKey("tune-connection-pool-limits", "Connection Pool 한계와 쿼리 시간을 함께 조정", "풀 크기, timeout, 느린 쿼리, 트랜잭션 범위를 함께 조정해 대기 시간을 줄이면서 RDS 연결 폭주를 막습니다.", 3, true, 0,
+										effects(2, 2, 1, -2, 1, 0)),
+								ScenarioOption.newOption("RDS 인스턴스 사양 증설", "DB 처리 여유는 늘릴 수 있지만 애플리케이션 풀 대기와 느린 쿼리 원인이 남으면 재발할 수 있습니다.", 1, false, 1,
+										effects(1, 1, -3, 1, 0, 0)),
+								ScenarioOption.newOption("Connection Pool 최대값만 크게 증가", "짧은 대기는 줄어도 RDS 동시 연결과 쿼리 부하가 폭증해 장애를 키울 수 있습니다.", 1, false, 2,
+										effects(1, -2, 1, 1, 0, 0))
+						)
+				),
+				Scenario.newScenarioWithGraphKey(
+						"alb-health-check-failure",
+						"ALB Health Check 실패",
+						ScenarioCategory.NETWORK,
+						ScenarioLevel.INTERMEDIATE,
+						"ALB가 정상 인스턴스를 제외하는 원인을 Health Check와 요청 경로에서 좁힙니다.",
+						"배포 후 ALB UnHealthyHostCount가 증가했고 Target 5xx 없이도 사용자 요청이 503으로 실패합니다. EC2 프로세스는 실행 중이지만 Health Check 경로가 외부 의존성을 검사하거나 Security Group 포트가 맞지 않을 수 있습니다. 정상 target 판정 조건을 서비스 준비 상태에 맞게 조정해야 합니다.",
+						List.of("Client", "ALB", "Target Group", "EC2", "RDS"),
+						List.of(
+								ScenarioOption.newOptionWithGraphKey("fix-health-check-path", "Health Check 경로와 EC2 인바운드 규칙 수정", "가벼운 readiness 경로와 ALB에서 EC2로 가는 포트를 맞춰 정상 인스턴스가 target에 남도록 합니다.", 3, true, 0,
+										effects(1, 3, 1, -1, 0, 1)),
+								ScenarioOption.newOption("EC2 인스턴스 추가", "정상 판정 조건이 틀린 상태라면 새 인스턴스도 비정상 target이 되어 503을 해결하지 못할 수 있습니다.", 1, false, 1,
+										effects(1, 0, -2, 1, 0, 0)),
+								ScenarioOption.newOption("Health Check 비활성화", "요청은 일부 전달될 수 있지만 비정상 인스턴스에도 트래픽이 가서 장애를 숨기고 확대할 수 있습니다.", 1, false, 3,
+										effects(1, -3, 1, 2, 0, -1))
+						)
+				),
+				Scenario.newScenarioWithGraphKey(
+						"private-subnet-nat-missing",
+						"Private subnet NAT Gateway 또는 라우팅 누락",
+						ScenarioCategory.NETWORK,
+						ScenarioLevel.INTERMEDIATE,
+						"Private subnet 서버의 외부 API 호출 실패를 NAT Gateway와 라우팅 관점에서 복구합니다.",
+						"Private subnet의 EC2가 결제사 API와 패키지 저장소에 연결하지 못하고 connection timeout이 발생합니다. ALB를 통한 사용자 요청은 들어오지만 아웃바운드 경로가 없거나 NAT Gateway가 Public subnet 라우팅과 연결되지 않았을 수 있습니다. 보안 경계를 유지하면서 필요한 외부 통신만 열어야 합니다.",
+						List.of("Client", "ALB", "Private subnet", "EC2", "RDS"),
+						List.of(
+								ScenarioOption.newOptionWithGraphKey("add-nat-gateway-route", "NAT Gateway와 Private 라우팅 경로 추가", "Public subnet의 NAT Gateway와 Private 라우팅 테이블 경로를 구성해 서버 직접 노출 없이 외부 호출을 복구합니다.", 3, true, 0,
+										effects(1, 2, -3, -2, 0, 2)),
+								ScenarioOption.newOption("VPC Endpoint만 추가", "S3 같은 AWS 서비스 접근에는 도움이 되지만 결제사 API 같은 인터넷 외부 서비스 호출은 해결하지 못할 수 있습니다.", 1, false, 0,
+										effects(1, 1, 1, -1, 0, 2)),
+								ScenarioOption.newOption("EC2를 Public subnet으로 이동", "외부 통신은 쉬워질 수 있지만 애플리케이션 서버 직접 노출 위험이 커져 보안 목표를 훼손합니다.", 1, false, 2,
+										effects(1, -1, 2, 1, 0, -3))
+						)
+				),
+				Scenario.newScenarioWithGraphKey(
+						"security-group-misconfiguration",
+						"Security Group 오설정",
+						ScenarioCategory.SECURITY,
+						ScenarioLevel.INTERMEDIATE,
+						"요청 경로 차단과 과도한 노출을 Security Group 참조 관계로 바로잡습니다.",
+						"ALB 502와 EC2 DB 연결 실패가 함께 발생했고 일부 포트는 임시로 0.0.0.0/0에 열려 있습니다. Client는 ALB로만 들어오고 ALB는 EC2 애플리케이션 포트로, EC2는 RDS 포트로만 접근해야 합니다. 막힌 요청 경로와 과도한 노출을 동시에 줄여야 합니다.",
+						List.of("Client", "ALB", "Security Group", "EC2", "RDS"),
+						List.of(
+								ScenarioOption.newOptionWithGraphKey("fix-security-group-references", "Security Group 참조 관계로 최소 허용 재구성", "ALB, EC2, RDS 사이 필요한 포트만 Security Group 참조로 허용해 요청 경로를 복구하고 직접 노출을 줄입니다.", 3, true, 0,
+										effects(1, 2, 1, -1, 0, 3)),
+								ScenarioOption.newOption("RDS Multi-AZ 활성화", "DB 인프라 가용성에는 도움이 되지만 Security Group이 막은 연결 경로나 과도한 노출은 해결하지 못합니다.", 1, false, 0,
+										effects(0, 1, -3, -1, 2, 0)),
+								ScenarioOption.newOption("문제 포트를 0.0.0.0/0에 개방", "연결은 빠르게 살아날 수 있지만 인터넷 전체에 관리 포트나 DB 포트를 노출할 수 있어 위험합니다.", 1, false, 3,
+										effects(1, -1, 2, 2, 0, -3))
+						)
 				)
-	);
+		);
 
 	private static final Set<String> SCENARIO_GRAPH_KEYS = SCENARIOS.stream()
 			.map(Scenario::getGraphKey)

@@ -100,6 +100,66 @@ public final class LearningRelations {
 					"redis-cache",
 					"반복 조회를 캐시할 때 성능 개선과 정합성 위험을 판단하는 데 필요한 문서입니다.",
 					"TTL, 캐시 무효화와 Redis 장애 시 RDS fallback"
+			),
+			relation(
+					"redis-failure-fallback",
+					"redis-cache",
+					"Redis 장애 시 cache miss와 fallback이 RDS 부하로 확산되는 흐름을 이해하는 데 필요한 문서입니다.",
+					"Redis 장애 우회, TTL 분산, cache stampede 방지"
+			),
+			relation(
+					"redis-failure-fallback",
+					"rds-connection-management",
+					"캐시 장애 중 RDS 연결과 쿼리 부하를 보호하는 기준을 판단하는 데 필요한 문서입니다.",
+					"fallback 요청 제한과 RDS 연결 보호"
+			),
+			relation(
+					"rds-connection-pool-exhaustion",
+					"rds-connection-management",
+					"Connection Pool 고갈과 RDS 연결 포화를 함께 판단하는 데 필요한 문서입니다.",
+					"풀 크기, timeout, 느린 쿼리, RDS 최대 연결 수"
+			),
+			relation(
+					"rds-connection-pool-exhaustion",
+					"auto-scaling-basics",
+					"EC2 확장이 RDS 연결 수를 함께 늘릴 수 있는 위험을 이해하는 데 필요한 문서입니다.",
+					"인스턴스 수 증가와 커넥션 풀 총량의 관계"
+			),
+			relation(
+					"alb-health-check-failure",
+					"alb-traffic-distribution",
+					"ALB Health Check 실패가 target 제외와 503으로 이어지는 흐름을 이해하는 데 필요한 문서입니다.",
+					"Health Check 경로, 임계값, 정상 target 분산"
+			),
+			relation(
+					"alb-health-check-failure",
+					"security-group-least-privilege",
+					"ALB에서 EC2로 가는 포트 허용이 Health Check에 미치는 영향을 판단하는 데 필요한 문서입니다.",
+					"ALB Security Group에서 EC2 Security Group으로 이어지는 허용 규칙"
+			),
+			relation(
+					"private-subnet-nat-missing",
+					"nat-gateway-outbound-communication",
+					"Private subnet 서버의 외부 통신 실패를 NAT Gateway와 라우팅 관점에서 판단하는 데 필요한 문서입니다.",
+					"NAT Gateway 경로, Public subnet 배치, 아웃바운드 비용"
+			),
+			relation(
+					"private-subnet-nat-missing",
+					"private-subnet-application-server",
+					"Private subnet 서버를 직접 노출하지 않으면서 필요한 아웃바운드만 여는 구조를 이해하는 데 필요한 문서입니다.",
+					"Private EC2 인바운드 차단과 아웃바운드 경로 분리"
+			),
+			relation(
+					"security-group-misconfiguration",
+					"security-group-least-privilege",
+					"Security Group 오설정으로 막힌 요청 경로와 과도한 노출을 함께 판단하는 데 필요한 문서입니다.",
+					"ALB, EC2, RDS 간 Security Group 참조와 최소 허용"
+			),
+			relation(
+					"security-group-misconfiguration",
+					"alb-traffic-distribution",
+					"ALB와 EC2 사이의 요청 전달 실패를 Health Check와 target 흐름으로 확인하는 데 필요한 문서입니다.",
+					"ALB target 요청 경로와 Security Group 차단 영향"
 			)
 	);
 
