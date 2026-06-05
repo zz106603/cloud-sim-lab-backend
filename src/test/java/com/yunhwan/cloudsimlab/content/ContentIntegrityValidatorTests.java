@@ -106,6 +106,40 @@ class ContentIntegrityValidatorTests {
 				.hasMessageContaining("options must include a core option or a positive score option");
 	}
 
+	@Test
+	void 초기_아키텍처와_선택지_목록이_null이어도_진단_메시지로_실패한다() {
+		Scenario brokenScenario = new Scenario(
+				null,
+				"single-spring-boot",
+				"null 컬렉션 시나리오",
+				ScenarioCategory.COMPUTE,
+				ScenarioLevel.BEGINNER,
+				"학습 목표",
+				"설명",
+				List.of("Client", "EC2"),
+				List.of(ScenarioOption.newOptionWithGraphKey("add-alb-auto-scaling", "선택지", "설명", 1, true, 0))
+		) {
+			@Override
+			public List<String> getInitialArchitecture() {
+				return null;
+			}
+
+			@Override
+			public List<ScenarioOption> getOptions() {
+				return null;
+			}
+		};
+
+		assertThatThrownBy(() -> validator.validate(
+				List.of(brokenScenario),
+				LearningDocumentSeedCatalog.documentKeys(),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("initialArchitecture must not be null")
+				.hasMessageContaining("options must not be null");
+	}
+
 	private ScenarioOption optionWithoutEffects() {
 		return new ScenarioOption(null, null, "검증 선택지", "설명", 0, false, 0, TradeOffEffects.none()) {
 			@Override

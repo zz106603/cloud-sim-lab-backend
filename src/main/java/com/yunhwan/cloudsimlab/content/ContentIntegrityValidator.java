@@ -57,18 +57,24 @@ public class ContentIntegrityValidator {
 			if (scenario.getLevel() == null) {
 				errors.add(scenarioLabel + " level must not be null");
 			}
-			validateInitialArchitecture(scenario, scenarioLabel, errors);
-			validateOptions(scenario, scenarioLabel, errors);
-			validateGraphEdges(scenarioLabel + " initialArchitecture", ArchitectureGraphs.initialFor(scenario), errors);
+			boolean hasInitialArchitecture = validateInitialArchitecture(scenario, scenarioLabel, errors);
+			validateOptions(scenario, scenarioLabel, hasInitialArchitecture, errors);
+			if (hasInitialArchitecture) {
+				validateGraphEdges(scenarioLabel + " initialArchitecture", ArchitectureGraphs.initialFor(scenario), errors);
+			}
 		}
 		return scenarioKeys;
 	}
 
-	private void validateInitialArchitecture(Scenario scenario, String scenarioLabel, List<String> errors) {
+	private boolean validateInitialArchitecture(Scenario scenario, String scenarioLabel, List<String> errors) {
 		List<String> components = scenario.getInitialArchitecture();
+		if (components == null) {
+			errors.add(scenarioLabel + " initialArchitecture must not be null");
+			return false;
+		}
 		if (components.isEmpty()) {
 			errors.add(scenarioLabel + " initialArchitecture must not be empty");
-			return;
+			return false;
 		}
 		Set<String> componentNames = new HashSet<>();
 		for (String component : components) {
@@ -78,10 +84,15 @@ public class ContentIntegrityValidator {
 				errors.add(scenarioLabel + " initialArchitecture has duplicated component: " + component);
 			}
 		}
+		return true;
 	}
 
-	private void validateOptions(Scenario scenario, String scenarioLabel, List<String> errors) {
+	private void validateOptions(Scenario scenario, String scenarioLabel, boolean hasInitialArchitecture, List<String> errors) {
 		List<ScenarioOption> options = scenario.getOptions();
+		if (options == null) {
+			errors.add(scenarioLabel + " options must not be null");
+			return;
+		}
 		if (options.isEmpty()) {
 			errors.add(scenarioLabel + " options must not be empty");
 			return;
@@ -109,7 +120,7 @@ public class ContentIntegrityValidator {
 			if (hasText(optionGraphKey) && !optionGraphKeys.add(optionGraphKey)) {
 				errors.add(optionLabel + " graphKey is duplicated in scenario: " + optionGraphKey);
 			}
-			validateMappedOption(scenario, option, optionLabel, errors);
+			validateMappedOption(scenario, option, optionLabel, hasInitialArchitecture, errors);
 		}
 
 		if (!hasJudgementOption) {
@@ -131,9 +142,18 @@ public class ContentIntegrityValidator {
 		validateEffectValue(optionLabel, "security", effects.security(), errors);
 	}
 
-	private void validateMappedOption(Scenario scenario, ScenarioOption option, String optionLabel, List<String> errors) {
+	private void validateMappedOption(
+			Scenario scenario,
+			ScenarioOption option,
+			String optionLabel,
+			boolean hasInitialArchitecture,
+			List<String> errors
+	) {
 		if (!ArchitectureGraphs.hasOptionMapping(scenario.getGraphKey(), option.getGraphKey())) {
 			errors.add(optionLabel + " graph mapping is missing: " + scenario.getGraphKey() + "::" + option.getGraphKey());
+			return;
+		}
+		if (!hasInitialArchitecture) {
 			return;
 		}
 
