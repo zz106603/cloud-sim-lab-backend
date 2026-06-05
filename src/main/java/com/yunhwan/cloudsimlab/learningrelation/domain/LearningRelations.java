@@ -112,6 +112,10 @@ public final class LearningRelations {
 				.toList();
 	}
 
+	public static List<LearningRelation> all() {
+		return RELATIONS;
+	}
+
 	public static List<LearningRelation> forDocument(String documentKey) {
 		return RELATIONS.stream()
 				.filter(relation -> relation.documentKey().equals(documentKey))
