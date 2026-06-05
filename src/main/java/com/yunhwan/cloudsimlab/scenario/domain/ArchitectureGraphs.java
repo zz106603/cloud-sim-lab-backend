@@ -5,8 +5,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public final class ArchitectureGraphs {
+
+	private static final Set<String> MAPPED_OPTION_KEYS = Set.of(
+			"single-spring-boot::add-alb-auto-scaling",
+			"traffic-spike-compute::add-auto-scaling",
+			"private-subnet-app::add-alb-private-ec2",
+			"private-subnet-app::add-private-ec2-nat",
+			"rds-failure::enable-multi-az",
+			"rds-failure::add-read-replica",
+			"read-heavy-performance::add-read-replica",
+			"read-heavy-performance::add-redis-cache"
+	);
 
 	private ArchitectureGraphs() {
 	}
@@ -17,6 +29,10 @@ public final class ArchitectureGraphs {
 
 	public static ArchitectureGraph finalFor(Scenario scenario, List<ScenarioOption> selectedOptions) {
 		return graphFor(scenario, selectedOptions);
+	}
+
+	public static boolean hasOptionMapping(String scenarioGraphKey, String optionGraphKey) {
+		return MAPPED_OPTION_KEYS.contains(graphMappingKey(scenarioGraphKey, optionGraphKey));
 	}
 
 	private static ArchitectureGraph graphFor(Scenario scenario, List<ScenarioOption> selectedOptions) {
