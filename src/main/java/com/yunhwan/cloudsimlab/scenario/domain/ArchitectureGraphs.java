@@ -139,6 +139,8 @@ public final class ArchitectureGraphs {
 		addNode(nodesById, "Redis");
 		addNode(nodesById, "RDS Fallback Guard");
 		addNode(nodesById, "RDS");
+		removeEdges(edges, "EC2", "Redis");
+		removeEdges(edges, "Redis", "RDS");
 		addEdge(edges, "EC2", "Redis", "캐시 조회");
 		addEdge(edges, "EC2", "RDS Fallback Guard", "제한된 fallback");
 		addEdge(edges, "RDS Fallback Guard", "RDS", "보호된 조회");
@@ -147,6 +149,8 @@ public final class ArchitectureGraphs {
 	private static void addConnectionPoolGuardPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
 		addNode(nodesById, "Connection Pool");
 		addNode(nodesById, "RDS");
+		removeEdges(edges, "EC2", "Connection Pool");
+		removeEdges(edges, "Connection Pool", "RDS");
 		addEdge(edges, "EC2", "Connection Pool", "제한된 연결");
 		addEdge(edges, "Connection Pool", "RDS", "쿼리 실행");
 	}
@@ -160,6 +164,7 @@ public final class ArchitectureGraphs {
 	}
 
 	private static void addSecurityGroupPath(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges) {
+		removeNode(nodesById, edges, "Security Group");
 		addNode(nodesById, "ALB Security Group");
 		addNode(nodesById, "EC2 Security Group");
 		addNode(nodesById, "RDS Security Group");
@@ -184,6 +189,18 @@ public final class ArchitectureGraphs {
 		if (!exists) {
 			edges.add(new ArchitectureEdge(source, target, label));
 		}
+	}
+
+	private static void removeNode(Map<String, ArchitectureNode> nodesById, List<ArchitectureEdge> edges, String label) {
+		String nodeId = nodeId(label);
+		nodesById.remove(nodeId);
+		edges.removeIf(edge -> edge.source().equals(nodeId) || edge.target().equals(nodeId));
+	}
+
+	private static void removeEdges(List<ArchitectureEdge> edges, String sourceLabel, String targetLabel) {
+		String source = nodeId(sourceLabel);
+		String target = nodeId(targetLabel);
+		edges.removeIf(edge -> edge.source().equals(source) && edge.target().equals(target));
 	}
 
 	private static String nodeId(String label) {

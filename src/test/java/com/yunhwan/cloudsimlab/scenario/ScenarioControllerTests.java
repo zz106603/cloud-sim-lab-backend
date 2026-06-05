@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -167,7 +168,7 @@ class ScenarioControllerTests {
 
 	@Test
 	void 핵심_선택지를_고르면_GOOD_시뮬레이션_결과와_관련_문서를_반환한다() throws Exception {
-		Long coreOptionId = computeScenario.getOptions().get(1).getId();
+		Long coreOptionId = optionId(computeScenario, ScenarioOption::isCore);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -263,7 +264,7 @@ class ScenarioControllerTests {
 						ScenarioOption.newOption("Increase cache size", "Reduce repeated reads.", 2, false, 0)
 				)
 		));
-		Long optionId = noCoreScenario.getOptions().getFirst().getId();
+		Long optionId = optionId(noCoreScenario, option -> option.getName().equals("Increase cache size"));
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", noCoreScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -277,7 +278,7 @@ class ScenarioControllerTests {
 
 	@Test
 	void 핵심_선택지가_빠진_유효한_선택지는_PARTIAL_결과와_한계를_반환한다() throws Exception {
-		Long partialOptionId = computeScenario.getOptions().getFirst().getId();
+		Long partialOptionId = optionId(computeScenario, option -> option.getName().equals("작은 EC2 인스턴스 유지"));
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -295,7 +296,7 @@ class ScenarioControllerTests {
 
 	@Test
 	void 위험_점수가_높은_선택지는_RISKY_결과와_위험_설명을_반환한다() throws Exception {
-		Long riskyOptionId = networkScenario.getOptions().getFirst().getId();
+		Long riskyOptionId = optionId(networkScenario, option -> option.getRiskScore() == 2);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", networkScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -332,7 +333,7 @@ class ScenarioControllerTests {
 						)
 				)
 		));
-		Long wrongOptionId = wrongScenario.getOptions().getFirst().getId();
+		Long wrongOptionId = optionId(wrongScenario, option -> option.getScore() == 0);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", wrongScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -351,7 +352,7 @@ class ScenarioControllerTests {
 	@Test
 	void 여러_핵심_선택지가_대안일_때_Redis_단독_선택도_GOOD_결과를_반환한다() throws Exception {
 		Scenario readHeavyScenario = seedPort.save(readHeavyScenario());
-		Long redisOptionId = readHeavyScenario.getOptions().get(0).getId();
+		Long redisOptionId = optionId(readHeavyScenario, option -> "add-redis-cache".equals(option.getGraphKey()));
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", readHeavyScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -369,7 +370,7 @@ class ScenarioControllerTests {
 	@Test
 	void 여러_핵심_선택지가_대안일_때_ReadReplica_단독_선택도_GOOD_결과를_반환한다() throws Exception {
 		Scenario readHeavyScenario = seedPort.save(readHeavyScenario());
-		Long readReplicaOptionId = readHeavyScenario.getOptions().get(1).getId();
+		Long readReplicaOptionId = optionId(readHeavyScenario, option -> "add-read-replica".equals(option.getGraphKey()));
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", readHeavyScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -395,7 +396,7 @@ class ScenarioControllerTests {
 						ScenarioOption.newOptionWithGraphKey("add-redis-cache", "Cache layer", "반복 조회를 캐시로 처리합니다.", 2, true, 0)
 				)
 		));
-		Long optionId = renamedScenario.getOptions().getFirst().getId();
+		Long optionId = optionId(renamedScenario, option -> "add-redis-cache".equals(option.getGraphKey()));
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", renamedScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -420,7 +421,7 @@ class ScenarioControllerTests {
 						ScenarioOption.newOption("Redis", "반복 조회를 캐시로 처리합니다.", 2, true, 0)
 				)
 		));
-		Long redisOptionId = redisScenario.getOptions().getFirst().getId();
+		Long redisOptionId = optionId(redisScenario, option -> option.getName().equals("Redis"));
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", redisScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -433,8 +434,8 @@ class ScenarioControllerTests {
 
 	@Test
 	void 시뮬레이션은_중복_선택지를_제거하고_선택_순서를_유지한다() throws Exception {
-		Long firstSelectedOptionId = computeScenario.getOptions().get(1).getId();
-		Long secondSelectedOptionId = computeScenario.getOptions().get(0).getId();
+		Long firstSelectedOptionId = optionId(computeScenario, ScenarioOption::isCore);
+		Long secondSelectedOptionId = optionId(computeScenario, option -> option.getName().equals("작은 EC2 인스턴스 유지"));
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -521,6 +522,14 @@ class ScenarioControllerTests {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
 				.andExpect(jsonPath("$.message").value("Invalid request value: scenarioId"));
+	}
+
+	private Long optionId(Scenario scenario, Predicate<ScenarioOption> predicate) {
+		return scenario.getOptions().stream()
+				.filter(predicate)
+				.findFirst()
+				.map(ScenarioOption::getId)
+				.orElseThrow();
 	}
 
 	private Scenario readHeavyScenario() {
