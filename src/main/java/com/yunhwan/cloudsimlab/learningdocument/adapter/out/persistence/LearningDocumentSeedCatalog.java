@@ -10,11 +10,7 @@ import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
 
 public final class LearningDocumentSeedCatalog {
 
-	private LearningDocumentSeedCatalog() {
-	}
-
-	public static List<SeedDocument> documents() {
-		return List.of(
+	private static final List<SeedDocument> DOCUMENTS = List.of(
 				new SeedDocument(
 						"ec2-compute-capacity",
 						"EC2와 컴퓨팅 용량",
@@ -95,13 +91,21 @@ public final class LearningDocumentSeedCatalog {
 						"Private subnet 서버가 외부로 나가야 할 때 NAT Gateway의 역할과 비용을 이해합니다.",
 						"nat-gateway-outbound-communication.md"
 				)
-		);
+	);
+
+	private static final Set<String> DOCUMENT_KEYS = DOCUMENTS.stream()
+			.map(SeedDocument::documentKey)
+			.collect(Collectors.toUnmodifiableSet());
+
+	private LearningDocumentSeedCatalog() {
+	}
+
+	public static List<SeedDocument> documents() {
+		return DOCUMENTS;
 	}
 
 	public static Set<String> documentKeys() {
-		return documents().stream()
-				.map(SeedDocument::documentKey)
-				.collect(Collectors.toUnmodifiableSet());
+		return DOCUMENT_KEYS;
 	}
 
 	public record SeedDocument(

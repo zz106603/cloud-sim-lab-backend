@@ -12,11 +12,7 @@ import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
 
 public final class ScenarioSeedCatalog {
 
-	private ScenarioSeedCatalog() {
-	}
-
-	public static List<Scenario> scenarios() {
-		return List.of(
+	private static final List<Scenario> SCENARIOS = List.of(
 				Scenario.newScenarioWithGraphKey(
 						"single-spring-boot",
 						"단일 Spring Boot 배포",
@@ -102,13 +98,21 @@ public final class ScenarioSeedCatalog {
 										effects(0, 1, -2, 1, 0, 0))
 						)
 				)
-		);
+	);
+
+	private static final Set<String> SCENARIO_GRAPH_KEYS = SCENARIOS.stream()
+			.map(Scenario::getGraphKey)
+			.collect(Collectors.toUnmodifiableSet());
+
+	private ScenarioSeedCatalog() {
+	}
+
+	public static List<Scenario> scenarios() {
+		return SCENARIOS;
 	}
 
 	public static Set<String> scenarioGraphKeys() {
-		return scenarios().stream()
-				.map(Scenario::getGraphKey)
-				.collect(Collectors.toUnmodifiableSet());
+		return SCENARIO_GRAPH_KEYS;
 	}
 
 	private static TradeOffEffects effects(
