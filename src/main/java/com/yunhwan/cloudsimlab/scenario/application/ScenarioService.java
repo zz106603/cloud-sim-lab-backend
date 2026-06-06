@@ -19,6 +19,7 @@ import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.GetScenarioUseCase;
 import com.yunhwan.cloudsimlab.scenario.application.port.in.SimulateScenarioUseCase;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraphs;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactFlows;
 import com.yunhwan.cloudsimlab.scenario.domain.RelatedLearningDocument;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
@@ -127,6 +128,7 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				TradeOffSummary.from(selectedOptions),
 				finalArchitecture,
 				ArchitectureGraphs.finalFor(scenario, selectedOptions),
+				FailureImpactFlows.resultFor(scenario, selectedOptions),
 				relatedLearningDocumentsFor(scenario, resultType)
 		);
 	}

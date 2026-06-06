@@ -8,6 +8,10 @@ import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureEdge;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraph;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraphs;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureNode;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpact;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactEdge;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactFlows;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactResult;
 import com.yunhwan.cloudsimlab.scenario.domain.RelatedLearningDocument;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
@@ -46,6 +50,7 @@ final class ScenarioDtos {
 			String problem,
 			List<String> initialArchitecture,
 			ArchitectureGraphResponse initialArchitectureGraph,
+			FailureImpactResponse initialFailureImpact,
 			List<OptionResponse> options,
 			List<RelatedLearningDocumentResponse> relatedLearningDocuments
 	) {
@@ -62,6 +67,7 @@ final class ScenarioDtos {
 					problem,
 					scenario.getInitialArchitecture(),
 					ArchitectureGraphResponse.from(ArchitectureGraphs.initialFor(scenario)),
+					FailureImpactResponse.from(FailureImpactFlows.initialFor(scenario)),
 					scenario.getOptions().stream()
 							.map(OptionResponse::from)
 							.toList(),
@@ -98,6 +104,7 @@ final class ScenarioDtos {
 			TradeOffSummaryResponse tradeOffSummary,
 			List<String> finalArchitecture,
 			ArchitectureGraphResponse finalArchitectureGraph,
+			FailureImpactResultResponse failureImpactResult,
 			List<RelatedLearningDocumentResponse> relatedLearningDocuments
 	) {
 		static SimulationResponse from(SimulationResult result) {
@@ -115,6 +122,7 @@ final class ScenarioDtos {
 					TradeOffSummaryResponse.from(result.getTradeOffSummary()),
 					result.getFinalArchitecture(),
 					ArchitectureGraphResponse.from(result.getFinalArchitectureGraph()),
+					FailureImpactResultResponse.from(result.getFailureImpactResult()),
 					result.getRelatedLearningDocuments().stream()
 							.map(RelatedLearningDocumentResponse::from)
 							.toList()
@@ -202,6 +210,54 @@ final class ScenarioDtos {
 	record ArchitectureEdgeResponse(String source, String target, String label) {
 		static ArchitectureEdgeResponse from(ArchitectureEdge edge) {
 			return new ArchitectureEdgeResponse(edge.source(), edge.target(), edge.label());
+		}
+	}
+
+	record FailureImpactResponse(
+			String failureSourceNodeId,
+			List<String> affectedNodeIds,
+			List<FailureImpactEdgeResponse> affectedEdges,
+			List<String> userSymptoms,
+			List<String> remainingRisks
+	) {
+		static FailureImpactResponse from(FailureImpact impact) {
+			if (impact == null) {
+				return null;
+			}
+			return new FailureImpactResponse(
+					impact.failureSourceNodeId(),
+					impact.affectedNodeIds(),
+					impact.affectedEdges().stream()
+							.map(FailureImpactEdgeResponse::from)
+							.toList(),
+					impact.userSymptoms(),
+					impact.remainingRisks()
+			);
+		}
+	}
+
+	record FailureImpactResultResponse(
+			List<FailureImpactEdgeResponse> recoveredEdges,
+			FailureImpactResponse remainingImpact,
+			List<String> postActionNotes
+	) {
+		static FailureImpactResultResponse from(FailureImpactResult result) {
+			if (result == null) {
+				return null;
+			}
+			return new FailureImpactResultResponse(
+					result.recoveredEdges().stream()
+							.map(FailureImpactEdgeResponse::from)
+							.toList(),
+					FailureImpactResponse.from(result.remainingImpact()),
+					result.postActionNotes()
+			);
+		}
+	}
+
+	record FailureImpactEdgeResponse(String source, String target, String label) {
+		static FailureImpactEdgeResponse from(FailureImpactEdge edge) {
+			return new FailureImpactEdgeResponse(edge.source(), edge.target(), edge.label());
 		}
 	}
 
