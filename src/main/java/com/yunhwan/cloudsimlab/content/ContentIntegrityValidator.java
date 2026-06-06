@@ -45,6 +45,7 @@ public class ContentIntegrityValidator {
 
 			validateText(scenarioKey, scenarioLabel, "graphKey", errors);
 			validateTrimmed(scenarioKey, scenarioLabel, "graphKey", errors);
+			validateLowercase(scenarioKey, scenarioLabel, "graphKey", errors);
 			if (hasText(scenarioKey) && !scenarioKeys.add(scenarioKey)) {
 				errors.add(scenarioLabel + " graphKey is duplicated: " + scenarioKey);
 			}
@@ -123,6 +124,7 @@ public class ContentIntegrityValidator {
 			}
 			validateText(optionGraphKey, optionLabel, "graphKey", errors);
 			validateTrimmed(optionGraphKey, optionLabel, "graphKey", errors);
+			validateLowercase(optionGraphKey, optionLabel, "graphKey", errors);
 			if (hasText(optionGraphKey) && !optionGraphKeys.add(optionGraphKey)) {
 				errors.add(optionLabel + " graphKey is duplicated in scenario: " + optionGraphKey);
 			}
@@ -358,6 +360,12 @@ public class ContentIntegrityValidator {
 	private void validateTrimmed(String value, String label, String fieldName, List<String> errors) {
 		if (value != null && !value.equals(value.trim())) {
 			errors.add(label + " " + fieldName + " must not have surrounding whitespace: '" + value + "'");
+		}
+	}
+
+	private void validateLowercase(String value, String label, String fieldName, List<String> errors) {
+		if (value != null && !value.equals(value.toLowerCase(java.util.Locale.ROOT))) {
+			errors.add(label + " " + fieldName + " must be lowercase: '" + value + "'");
 		}
 	}
 

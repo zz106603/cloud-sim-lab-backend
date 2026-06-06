@@ -60,6 +60,31 @@ class ContentIntegrityValidatorTests {
 	}
 
 	@Test
+	void graphKey에_대문자가_있으면_진단한다() {
+		Scenario brokenScenario = Scenario.newScenarioWithGraphKey(
+				"RDS-Failure",
+				"대문자 graphKey 시나리오",
+				ScenarioCategory.STORAGE,
+				ScenarioLevel.INTERMEDIATE,
+				"학습 목표",
+				"설명",
+				List.of("Client", "ALB", "EC2", "RDS"),
+				List.of(
+						ScenarioOption.newOptionWithGraphKey("Enable-Multi-AZ", "Multi-AZ 활성화", "설명", 1, true, 0)
+				)
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				List.of(brokenScenario),
+				LearningDocumentSeedCatalog.documentKeys(),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("scenario[RDS-Failure|대문자 graphKey 시나리오] graphKey must be lowercase: 'RDS-Failure'")
+				.hasMessageContaining("option[Enable-Multi-AZ] graphKey must be lowercase: 'Enable-Multi-AZ'");
+	}
+
+	@Test
 	void 존재하지_않는_문서와_시나리오_관계를_진단한다() {
 		LearningRelation brokenRelation = new LearningRelation(
 				"unknown-scenario",
