@@ -15,6 +15,7 @@ public class SimulationResult {
 	private final TradeOffSummary tradeOffSummary;
 	private final List<String> finalArchitecture;
 	private final ArchitectureGraph finalArchitectureGraph;
+	private final FailureImpactResult failureImpactResult;
 	private final List<RelatedLearningDocument> relatedLearningDocuments;
 
 	public SimulationResult(
@@ -29,6 +30,7 @@ public class SimulationResult {
 			TradeOffSummary tradeOffSummary,
 			List<String> finalArchitecture,
 			ArchitectureGraph finalArchitectureGraph,
+			FailureImpactResult failureImpactResult,
 			List<RelatedLearningDocument> relatedLearningDocuments
 	) {
 		this.scenarioId = scenarioId;
@@ -42,6 +44,7 @@ public class SimulationResult {
 		this.tradeOffSummary = tradeOffSummary == null ? TradeOffSummary.from(this.selectedOptions) : tradeOffSummary;
 		this.finalArchitecture = finalArchitecture == null ? List.of() : List.copyOf(finalArchitecture);
 		this.finalArchitectureGraph = finalArchitectureGraph == null ? new ArchitectureGraph(List.of(), List.of()) : finalArchitectureGraph;
+		this.failureImpactResult = failureImpactResult;
 		this.relatedLearningDocuments = relatedLearningDocuments == null ? List.of() : List.copyOf(relatedLearningDocuments);
 	}
 
@@ -87,6 +90,10 @@ public class SimulationResult {
 
 	public ArchitectureGraph getFinalArchitectureGraph() {
 		return finalArchitectureGraph;
+	}
+
+	public FailureImpactResult getFailureImpactResult() {
+		return failureImpactResult;
 	}
 
 	public List<RelatedLearningDocument> getRelatedLearningDocuments() {
