@@ -79,6 +79,31 @@ class ContentIntegrityValidatorTests {
 	}
 
 	@Test
+	void 장애_영향이_초기_그래프에_없는_node를_참조하면_진단한다() {
+		Scenario brokenScenario = Scenario.newScenarioWithGraphKey(
+				"rds-failure",
+				"깨진 RDS 장애 시나리오",
+				ScenarioCategory.STORAGE,
+				ScenarioLevel.INTERMEDIATE,
+				"장애 영향을 검증합니다.",
+				"RDS 노드가 빠진 장애 시나리오입니다.",
+				List.of("Client", "ALB", "EC2"),
+				List.of(
+						ScenarioOption.newOptionWithGraphKey("enable-multi-az", "Multi-AZ 활성화", "설명", 1, true, 0)
+				)
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				List.of(brokenScenario),
+				LearningDocumentSeedCatalog.documentKeys(),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("initialFailureImpact failureSourceNodeId references unknown graph node: rds")
+				.hasMessageContaining("initialFailureImpact affectedEdges edge does not exist in graph: ec2->rds|DB 접근");
+	}
+
+	@Test
 	void 필수_시나리오_데이터와_effects_누락을_진단한다() {
 		Scenario brokenScenario = Scenario.newScenarioWithGraphKey(
 				"broken-scenario",

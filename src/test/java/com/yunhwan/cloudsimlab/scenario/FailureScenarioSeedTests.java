@@ -99,6 +99,56 @@ class FailureScenarioSeedTests {
 	}
 
 	@Test
+	void 장애_시나리오_상세는_초기_장애_영향_흐름을_반환한다() throws Exception {
+		Scenario rdsFailureScenario = scenariosByGraphKey.get("rds-failure");
+
+		mockMvc.perform(get("/api/scenarios/{scenarioId}", rdsFailureScenario.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.initialFailureImpact.failureSourceNodeId").value("rds"))
+				.andExpect(jsonPath("$.initialFailureImpact.affectedNodeIds[?(@ == 'rds')]", hasSize(1)))
+				.andExpect(jsonPath("$.initialFailureImpact.affectedEdges[?(@.source == 'ec2' && @.target == 'rds')]", hasSize(1)))
+				.andExpect(jsonPath("$.initialFailureImpact.userSymptoms[0]", containsString("쓰기와 조회 요청")))
+				.andExpect(jsonPath("$.initialFailureImpact.remainingRisks[0]", containsString("단일 AZ RDS 장애")));
+	}
+
+	@Test
+	void 시뮬레이션은_복구된_경로와_남은_장애_영향을_구분한다() throws Exception {
+		Scenario redisScenario = scenariosByGraphKey.get("redis-failure-fallback");
+		Long coreOptionId = optionId(redisScenario, ScenarioOption::isCore);
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", redisScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(coreOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.failureImpactResult.recoveredEdges[?(@.source == 'ec2' && @.target == 'rds-fallback-guard')]", hasSize(1)))
+				.andExpect(jsonPath("$.failureImpactResult.recoveredEdges[?(@.source == 'rds-fallback-guard' && @.target == 'rds')]", hasSize(1)))
+				.andExpect(jsonPath("$.failureImpactResult.remainingImpact.failureSourceNodeId").value("redis"))
+				.andExpect(jsonPath("$.failureImpactResult.remainingImpact.affectedNodeIds", hasSize(0)))
+				.andExpect(jsonPath("$.failureImpactResult.remainingImpact.remainingRisks[0]", containsString("Redis 자체 복구")))
+				.andExpect(jsonPath("$.failureImpactResult.postActionNotes[0]", containsString("RDS 포화")));
+	}
+
+	@Test
+	void 핵심_대응이_빠진_시뮬레이션은_초기_장애_영향을_잔여_영향으로_남긴다() throws Exception {
+		Scenario albScenario = scenariosByGraphKey.get("alb-health-check-failure");
+		Long partialOptionId = optionId(albScenario, option -> option.getScore() > 0 && !option.isCore());
+
+		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", albScenario.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"selectedOptionIds":[%d]}
+								""".formatted(partialOptionId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resultType").value("PARTIAL"))
+				.andExpect(jsonPath("$.failureImpactResult.recoveredEdges", hasSize(0)))
+				.andExpect(jsonPath("$.failureImpactResult.remainingImpact.failureSourceNodeId").value("target-group"))
+				.andExpect(jsonPath("$.failureImpactResult.remainingImpact.affectedEdges[?(@.source == 'target-group' && @.target == 'ec2')]", hasSize(1)))
+				.andExpect(jsonPath("$.failureImpactResult.postActionNotes[0]", containsString("직접 복구하지 못해")));
+	}
+
+	@Test
 	void 장애_시나리오_핵심_대응_그래프는_중복되거나_오해되는_요소를_남기지_않는다() {
 		for (String graphKey : FAILURE_SCENARIO_KEYS) {
 			Scenario scenario = scenariosByGraphKey.get(graphKey);

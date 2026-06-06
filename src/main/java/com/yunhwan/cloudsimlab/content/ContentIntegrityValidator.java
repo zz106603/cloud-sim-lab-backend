@@ -10,6 +10,10 @@ import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureEdge;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraph;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraphs;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureNode;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpact;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactEdge;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactFlows;
+import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactResult;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
 import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
@@ -60,7 +64,9 @@ public class ContentIntegrityValidator {
 			boolean hasInitialArchitecture = validateInitialArchitecture(scenario, scenarioLabel, errors);
 			validateOptions(scenario, scenarioLabel, hasInitialArchitecture, errors);
 			if (hasInitialArchitecture) {
-				validateGraphEdges(scenarioLabel + " initialArchitecture", ArchitectureGraphs.initialFor(scenario), errors);
+				ArchitectureGraph initialGraph = ArchitectureGraphs.initialFor(scenario);
+				validateGraphEdges(scenarioLabel + " initialArchitecture", initialGraph, errors);
+				validateFailureImpact(scenarioLabel + " initialFailureImpact", FailureImpactFlows.initialFor(scenario), initialGraph, errors);
 			}
 		}
 		return scenarioKeys;
@@ -163,6 +169,13 @@ public class ContentIntegrityValidator {
 			errors.add(optionLabel + " graph mapping does not change architecture: " + scenario.getGraphKey() + "::" + option.getGraphKey());
 		}
 		validateGraphEdges(optionLabel + " finalArchitecture", finalGraph, errors);
+		validateFailureImpactResult(
+				optionLabel + " failureImpactResult",
+				FailureImpactFlows.resultFor(scenario, List.of(option)),
+				initialGraph,
+				finalGraph,
+				errors
+		);
 	}
 
 	private void validateGraphEdges(String graphLabel, ArchitectureGraph graph, List<String> errors) {
@@ -182,6 +195,119 @@ public class ContentIntegrityValidator {
 				errors.add(graphLabel + " edge target does not exist: " + edge.target());
 			}
 		}
+	}
+
+	private void validateFailureImpact(String label, FailureImpact impact, ArchitectureGraph graph, List<String> errors) {
+		if (impact == null) {
+			return;
+		}
+		Set<String> nodeIds = nodeIds(graph);
+		Set<String> edgeKeys = edgeKeys(graph);
+		validateFailureImpactText(label, impact, errors);
+		validateNodeReference(label, "failureSourceNodeId", impact.failureSourceNodeId(), nodeIds, errors);
+		for (String nodeId : impact.affectedNodeIds()) {
+			validateNodeReference(label, "affectedNodeIds", nodeId, nodeIds, errors);
+		}
+		for (FailureImpactEdge edge : impact.affectedEdges()) {
+			validateFailureImpactEdge(label + " affectedEdges", edge, nodeIds, edgeKeys, errors);
+		}
+	}
+
+	private void validateFailureImpactResult(
+			String label,
+			FailureImpactResult result,
+			ArchitectureGraph initialGraph,
+			ArchitectureGraph finalGraph,
+			List<String> errors
+	) {
+		if (result == null) {
+			return;
+		}
+		Set<String> finalNodeIds = nodeIds(finalGraph);
+		Set<String> finalEdgeKeys = edgeKeys(finalGraph);
+		for (FailureImpactEdge edge : result.recoveredEdges()) {
+			validateFailureImpactEdge(label + " recoveredEdges", edge, finalNodeIds, finalEdgeKeys, errors);
+		}
+		validateRemainingImpact(label + " remainingImpact", result.remainingImpact(), initialGraph, finalGraph, errors);
+		for (String note : result.postActionNotes()) {
+			validateText(note, label, "postActionNotes", errors);
+		}
+	}
+
+	private void validateRemainingImpact(
+			String label,
+			FailureImpact impact,
+			ArchitectureGraph initialGraph,
+			ArchitectureGraph finalGraph,
+			List<String> errors
+	) {
+		if (impact == null) {
+			return;
+		}
+		Set<String> nodeIds = nodeIds(initialGraph);
+		nodeIds.addAll(nodeIds(finalGraph));
+		Set<String> edgeKeys = edgeKeys(initialGraph);
+		edgeKeys.addAll(edgeKeys(finalGraph));
+		validateFailureImpactText(label, impact, errors);
+		validateNodeReference(label, "failureSourceNodeId", impact.failureSourceNodeId(), nodeIds, errors);
+		for (String nodeId : impact.affectedNodeIds()) {
+			validateNodeReference(label, "affectedNodeIds", nodeId, nodeIds, errors);
+		}
+		for (FailureImpactEdge edge : impact.affectedEdges()) {
+			validateFailureImpactEdge(label + " affectedEdges", edge, nodeIds, edgeKeys, errors);
+		}
+	}
+
+	private void validateFailureImpactText(String label, FailureImpact impact, List<String> errors) {
+		for (String symptom : impact.userSymptoms()) {
+			validateText(symptom, label, "userSymptoms", errors);
+		}
+		for (String risk : impact.remainingRisks()) {
+			validateText(risk, label, "remainingRisks", errors);
+		}
+	}
+
+	private void validateFailureImpactEdge(
+			String label,
+			FailureImpactEdge edge,
+			Set<String> nodeIds,
+			Set<String> edgeKeys,
+			List<String> errors
+	) {
+		if (edge == null) {
+			errors.add(label + " must not contain null");
+			return;
+		}
+		validateNodeReference(label, "source", edge.source(), nodeIds, errors);
+		validateNodeReference(label, "target", edge.target(), nodeIds, errors);
+		validateText(edge.label(), label, "label", errors);
+		String edgeKey = edge.source() + "->" + edge.target() + "|" + edge.label();
+		if (hasText(edge.source()) && hasText(edge.target()) && hasText(edge.label()) && !edgeKeys.contains(edgeKey)) {
+			errors.add(label + " edge does not exist in graph: " + edgeKey);
+		}
+	}
+
+	private void validateNodeReference(String label, String fieldName, String nodeId, Set<String> nodeIds, List<String> errors) {
+		validateText(nodeId, label, fieldName, errors);
+		if (hasText(nodeId) && !nodeIds.contains(nodeId)) {
+			errors.add(label + " " + fieldName + " references unknown graph node: " + nodeId);
+		}
+	}
+
+	private Set<String> nodeIds(ArchitectureGraph graph) {
+		Set<String> nodeIds = new HashSet<>();
+		for (ArchitectureNode node : graph.nodes()) {
+			nodeIds.add(node.id());
+		}
+		return nodeIds;
+	}
+
+	private Set<String> edgeKeys(ArchitectureGraph graph) {
+		Set<String> edgeKeys = new HashSet<>();
+		for (ArchitectureEdge edge : graph.edges()) {
+			edgeKeys.add(edge.source() + "->" + edge.target() + "|" + edge.label());
+		}
+		return edgeKeys;
 	}
 
 	private void validateRelations(
