@@ -254,6 +254,56 @@ curl -X POST http://localhost:8080/api/scenarios/1/simulate \
 - `effects`는 `performance`, `availability`, `cost`, `complexity`, `consistency`, `security` 관점의 고정 효과입니다. 값은 `-3`부터 `3`이며 양수는 이점, 음수는 부담을 뜻합니다. `cost`와 `complexity`의 양수는 비용과 복잡도가 줄어드는 효과입니다.
 - `tradeOffSummary`는 중복을 제거한 선택지들의 효과를 차원별로 단순 합산합니다. 이 요약은 비교와 설명에만 사용하며 기존 결과 타입 판정에는 영향을 주지 않습니다.
 
+### 장애 영향 흐름 응답
+
+RDS 장애, Redis 장애, ALB Health Check 실패처럼 요청 경로의 어느 지점이 실패하는지 학습해야 하는 시나리오는 상세 응답에 `initialFailureImpact`를 포함합니다. 정상 구조 개선 시나리오는 이 값이 `null`입니다.
+
+```json
+{
+  "initialFailureImpact": {
+    "failureSourceNodeId": "redis",
+    "affectedNodeIds": ["redis", "rds", "ec2"],
+    "affectedEdges": [
+      { "source": "ec2", "target": "redis", "label": "연결" },
+      { "source": "redis", "target": "rds", "label": "DB 접근" }
+    ],
+    "userSymptoms": [
+      "캐시 조회 실패가 증가하고 조회 요청이 RDS로 한꺼번에 우회됩니다."
+    ],
+    "remainingRisks": [
+      "fallback 제한이 없으면 Redis 장애가 RDS 포화로 확산될 수 있습니다."
+    ]
+  }
+}
+```
+
+시뮬레이션 결과의 `failureImpactResult`는 선택한 대응으로 복구된 경로와 아직 남은 장애 영향 또는 주의점을 구분합니다.
+
+```json
+{
+  "failureImpactResult": {
+    "recoveredEdges": [
+      { "source": "ec2", "target": "rds-fallback-guard", "label": "제한된 fallback" },
+      { "source": "rds-fallback-guard", "target": "rds", "label": "보호된 조회" }
+    ],
+    "remainingImpact": {
+      "failureSourceNodeId": "redis",
+      "affectedNodeIds": [],
+      "affectedEdges": [],
+      "userSymptoms": [],
+      "remainingRisks": [
+        "Redis 자체 복구 전까지 캐시 hit율 저하와 일부 응답 지연은 남습니다."
+      ]
+    },
+    "postActionNotes": [
+      "짧은 timeout, 제한된 fallback, TTL 분산으로 RDS 포화를 막는 경로를 복구합니다."
+    ]
+  }
+}
+```
+
+`failureSourceNodeId`, `affectedNodeIds`, `affectedEdges`, `recoveredEdges`는 같은 응답의 `initialArchitectureGraph` 또는 `finalArchitectureGraph`에 있는 node id와 edge source/target을 참조합니다. 프론트는 이 값을 사용해 장애 시작점, 영향 경로, 복구 경로를 시각적으로 강조할 수 있습니다.
+
 ## 아키텍처 시각화 예시
 
 백엔드는 기존 호환성을 위한 컴포넌트 배열과 React Flow 같은 시각화에 사용할 수 있는 최소 graph 응답을 함께 반환합니다.

@@ -248,6 +248,7 @@ Read Replica 추가도 조회 트래픽 분산에 도움이 된다.
 - 그래프 변화를 선언하는 선택지 `graphKey`는 비어 있지 않고 앞뒤 공백이 없어야 하며 같은 시나리오 안에서 중복될 수 없다.
 - 선택지 `graphKey`가 있으면 `scenarioGraphKey::optionGraphKey` 그래프 매핑이 존재해야 하고, 적용 결과가 초기 그래프와 달라야 한다.
 - 생성된 초기/최종 아키텍처 그래프의 모든 edge `source`, `target`은 존재하는 node id를 참조해야 한다.
+- 장애 영향 흐름이 있는 시나리오의 `failureSourceNodeId`, `affectedNodeIds`, `affectedEdges`, `recoveredEdges`는 초기 또는 최종 아키텍처 그래프의 유효한 node/edge를 참조해야 한다.
 - 명시적 문서-시나리오 연결은 존재하는 시나리오 `graphKey`와 문서 key만 참조해야 하며, 연결 이유와 검토 포인트가 비어 있으면 안 된다.
 - 선택지 trade-off 효과는 `performance`, `availability`, `cost`, `complexity`, `consistency`, `security` 값을 모두 가져야 하며 각 값은 `-3`부터 `3` 사이다.
 - 시나리오는 제목, 학습 목표 역할의 요약, 설명, 초기 아키텍처, 선택지를 가져야 한다.
@@ -255,7 +256,59 @@ Read Replica 추가도 조회 트래픽 분산에 도움이 된다.
 
 ---
 
-# 8. 시나리오 데이터 구조
+# 9. 장애 영향 흐름 응답 구조
+
+장애 시나리오는 초기 그래프의 어떤 node에서 장애가 시작되고 어떤 요청 경로가 영향을 받는지 `initialFailureImpact`로 제공한다. 정상 구조 개선 시나리오는 이 데이터를 갖지 않는다.
+
+```json
+{
+  "initialFailureImpact": {
+    "failureSourceNodeId": "target-group",
+    "affectedNodeIds": ["target-group", "alb", "ec2"],
+    "affectedEdges": [
+      { "source": "alb", "target": "target-group", "label": "연결" },
+      { "source": "target-group", "target": "ec2", "label": "연결" }
+    ],
+    "userSymptoms": [
+      "정상 EC2가 target에서 제외되어 사용자 요청이 503으로 실패합니다."
+    ],
+    "remainingRisks": [
+      "Health Check가 외부 의존성을 과도하게 검사하면 배포 중 정상 인스턴스도 제외될 수 있습니다."
+    ]
+  }
+}
+```
+
+선택지 적용 후에는 `failureImpactResult`로 복구된 경로, 남은 영향, 대응 후 주의점을 제공한다.
+
+```json
+{
+  "failureImpactResult": {
+    "recoveredEdges": [
+      { "source": "alb", "target": "health-check", "label": "readiness 확인" },
+      { "source": "health-check", "target": "ec2", "label": "정상 target 판정" }
+    ],
+    "remainingImpact": {
+      "failureSourceNodeId": "target-group",
+      "affectedNodeIds": [],
+      "affectedEdges": [],
+      "userSymptoms": [],
+      "remainingRisks": [
+        "배포 직후 준비 시간과 Health Check 유예 시간은 계속 맞춰야 합니다."
+      ]
+    },
+    "postActionNotes": [
+      "가벼운 readiness 경로와 ALB-EC2 포트 허용으로 정상 target 판정 경로를 복구합니다."
+    ]
+  }
+}
+```
+
+이 모델은 실제 장애 전파 엔진이 아니라 콘텐츠에 정의된 결정적 학습 결과다. 같은 시나리오와 같은 선택지는 항상 같은 장애 영향 결과를 반환한다.
+
+---
+
+# 10. 시나리오 데이터 구조
 
 ```json
 {
