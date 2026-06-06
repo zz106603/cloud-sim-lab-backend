@@ -244,8 +244,8 @@ Read Replica 추가도 조회 트래픽 분산에 도움이 된다.
 
 시나리오와 학습 문서 seed를 확장할 때는 테스트에서 다음 규칙을 검증한다.
 
-- 시나리오 `graphKey`는 비어 있지 않고 앞뒤 공백이 없어야 하며 전체 seed 안에서 중복될 수 없다.
-- 그래프 변화를 선언하는 선택지 `graphKey`는 비어 있지 않고 앞뒤 공백이 없어야 하며 같은 시나리오 안에서 중복될 수 없다.
+- 시나리오 `graphKey`는 비어 있지 않고 소문자여야 하며 앞뒤 공백이 없어야 하고 전체 seed 안에서 중복될 수 없다.
+- 그래프 변화를 선언하는 선택지 `graphKey`는 비어 있지 않고 소문자여야 하며 앞뒤 공백이 없어야 하고 같은 시나리오 안에서 중복될 수 없다.
 - 선택지 `graphKey`가 있으면 `scenarioGraphKey::optionGraphKey` 그래프 매핑이 존재해야 하고, 적용 결과가 초기 그래프와 달라야 한다.
 - 생성된 초기/최종 아키텍처 그래프의 모든 edge `source`, `target`은 존재하는 node id를 참조해야 한다.
 - 장애 영향 흐름이 있는 시나리오의 `failureSourceNodeId`, `affectedNodeIds`, `affectedEdges`, `recoveredEdges`는 초기 또는 최종 아키텍처 그래프의 유효한 node/edge를 참조해야 한다.
