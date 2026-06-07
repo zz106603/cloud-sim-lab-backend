@@ -38,25 +38,25 @@ public class UserArchitecture {
 			throw new IllegalArgumentException("updatedAt must not be before createdAt");
 		}
 
-		List<UserArchitectureNode> copiedNodes = nodes == null ? List.of() : List.copyOf(nodes);
-		List<UserArchitectureConnection> copiedConnections = connections == null ? List.of() : List.copyOf(connections);
-		validateNodes(copiedNodes);
-		validateConnections(copiedConnections, copiedNodes);
+		List<UserArchitectureNode> candidateNodes = nodes == null ? List.of() : nodes;
+		List<UserArchitectureConnection> candidateConnections = connections == null ? List.of() : connections;
+		Set<String> nodeIds = validateNodes(candidateNodes);
+		validateConnections(candidateConnections, nodeIds);
 
 		this.architectureId = architectureId;
 		this.title = title;
 		this.description = description == null ? "" : description;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
-		this.nodes = copiedNodes.stream()
+		this.nodes = candidateNodes.stream()
 				.sorted(Comparator.comparing(UserArchitectureNode::id))
 				.toList();
-		this.connections = copiedConnections.stream()
+		this.connections = candidateConnections.stream()
 				.sorted(Comparator.comparing(UserArchitectureConnection::id))
 				.toList();
 	}
 
-	private static void validateNodes(List<UserArchitectureNode> nodes) {
+	private static Set<String> validateNodes(List<UserArchitectureNode> nodes) {
 		Set<String> nodeIds = new HashSet<>();
 		for (UserArchitectureNode node : nodes) {
 			if (node == null) {
@@ -66,14 +66,10 @@ public class UserArchitecture {
 				throw new IllegalArgumentException("node id must be unique: " + node.id());
 			}
 		}
+		return nodeIds;
 	}
 
-	private static void validateConnections(List<UserArchitectureConnection> connections, List<UserArchitectureNode> nodes) {
-		Set<String> nodeIds = new HashSet<>();
-		for (UserArchitectureNode node : nodes) {
-			nodeIds.add(node.id());
-		}
-
+	private static void validateConnections(List<UserArchitectureConnection> connections, Set<String> nodeIds) {
 		Set<String> connectionIds = new HashSet<>();
 		for (UserArchitectureConnection connection : connections) {
 			if (connection == null) {
