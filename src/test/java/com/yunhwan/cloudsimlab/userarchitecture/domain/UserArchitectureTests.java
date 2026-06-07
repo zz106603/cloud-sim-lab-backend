@@ -207,4 +207,35 @@ class UserArchitectureTests {
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessage("connection id must be unique: conn-1");
 	}
+
+	@Test
+	void 노드와_연결_목록의_null_요소를_의도한_도메인_예외로_거부한다() {
+		List<UserArchitectureNode> nodes = new ArrayList<>();
+		nodes.add(null);
+		assertThatThrownBy(() -> new UserArchitecture(
+				"arch-1",
+				"null 노드",
+				"",
+				CREATED_AT,
+				UPDATED_AT,
+				nodes,
+				List.of()
+		))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("nodes must not contain null");
+
+		List<UserArchitectureConnection> connections = new ArrayList<>();
+		connections.add(null);
+		assertThatThrownBy(() -> new UserArchitecture(
+				"arch-1",
+				"null 연결",
+				"",
+				CREATED_AT,
+				UPDATED_AT,
+				List.of(new UserArchitectureNode("ec2-1", UserArchitectureResourceType.EC2, "API")),
+				connections
+		))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("connections must not contain null");
+	}
 }
