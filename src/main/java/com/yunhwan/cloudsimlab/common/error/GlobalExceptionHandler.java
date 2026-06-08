@@ -10,6 +10,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.yunhwan.cloudsimlab.learningdocument.application.LearningDocumentNotFoundException;
 import com.yunhwan.cloudsimlab.scenario.application.InvalidSimulationRequestException;
 import com.yunhwan.cloudsimlab.scenario.application.ScenarioNotFoundException;
+import com.yunhwan.cloudsimlab.userarchitecture.application.InvalidUserArchitectureRequestException;
+import com.yunhwan.cloudsimlab.userarchitecture.application.UserArchitectureNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,6 +32,18 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(InvalidSimulationRequestException.class)
 	ErrorResponse handleInvalidSimulationRequest(InvalidSimulationRequestException ex) {
 		return new ErrorResponse("INVALID_SIMULATION_REQUEST", ex.getMessage());
+	}
+
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	@ExceptionHandler(UserArchitectureNotFoundException.class)
+	ErrorResponse handleUserArchitectureNotFound(UserArchitectureNotFoundException ex) {
+		return new ErrorResponse("USER_ARCHITECTURE_NOT_FOUND", ex.getMessage());
+	}
+
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	@ExceptionHandler(InvalidUserArchitectureRequestException.class)
+	ErrorResponse handleInvalidUserArchitectureRequest(InvalidUserArchitectureRequestException ex) {
+		return new ErrorResponse("INVALID_USER_ARCHITECTURE_REQUEST", ex.getMessage());
 	}
 
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
