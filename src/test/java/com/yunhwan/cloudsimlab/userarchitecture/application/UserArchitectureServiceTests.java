@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,30 @@ class UserArchitectureServiceTests {
 		)))
 				.isInstanceOf(InvalidUserArchitectureRequestException.class)
 				.hasMessage("connection targetNodeId must reference an existing node: rds-1");
+	}
+
+	@Test
+	void null_노드_command는_요청_검증_예외로_거부한다() {
+		assertThatThrownBy(() -> service.create(new CreateUserArchitectureCommand(
+				"null 노드 아키텍처",
+				"",
+				Arrays.asList(new NodeCommand("ec2-1", UserArchitectureResourceType.EC2, "API"), null),
+				List.of()
+		)))
+				.isInstanceOf(InvalidUserArchitectureRequestException.class)
+				.hasMessage("nodes must not contain null");
+	}
+
+	@Test
+	void null_연결_command는_요청_검증_예외로_거부한다() {
+		assertThatThrownBy(() -> service.create(new CreateUserArchitectureCommand(
+				"null 연결 아키텍처",
+				"",
+				List.of(new NodeCommand("ec2-1", UserArchitectureResourceType.EC2, "API")),
+				Arrays.asList(new ConnectionCommand("conn-1", "ec2-1", "ec2-1", UserArchitectureConnectionType.DEPENDS_ON), null)
+		)))
+				.isInstanceOf(InvalidUserArchitectureRequestException.class)
+				.hasMessage("connections must not contain null");
 	}
 
 	private static class InMemoryPort implements UserArchitectureQueryPort, UserArchitectureCommandPort {
