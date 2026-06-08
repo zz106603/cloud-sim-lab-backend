@@ -133,7 +133,7 @@ final class UserArchitectureDtos {
 			return List.of();
 		}
 		return requests.stream()
-				.map(request -> request == null ? new NodeCommand(null, null, null) : request.toCommand())
+				.map(request -> request == null ? null : request.toCommand())
 				.toList();
 	}
 
@@ -142,7 +142,7 @@ final class UserArchitectureDtos {
 			return List.of();
 		}
 		return requests.stream()
-				.map(request -> request == null ? new ConnectionCommand(null, null, null, null) : request.toCommand())
+				.map(request -> request == null ? null : request.toCommand())
 				.toList();
 	}
 }

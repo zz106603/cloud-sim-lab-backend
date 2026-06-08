@@ -1,6 +1,5 @@
 package com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web;
 
-import java.net.URI;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -12,6 +11,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.DetailResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.SaveRequest;
@@ -52,7 +52,10 @@ public class UserArchitectureController {
 		DetailResponse response = DetailResponse.from(manageUserArchitectureUseCase.create(
 				request == null ? null : request.toCreateCommand()
 		));
-		return ResponseEntity.created(URI.create("/api/user-architectures/" + response.architectureId()))
+		return ResponseEntity.created(ServletUriComponentsBuilder.fromCurrentRequest()
+						.path("/{architectureId}")
+						.buildAndExpand(response.architectureId())
+						.toUri())
 				.body(response);
 	}
 
