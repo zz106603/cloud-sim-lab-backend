@@ -29,6 +29,7 @@ Cloud Sim Lab은 다음 질문을 다룹니다.
 - 결과 유형 반환: `GOOD`, `PARTIAL`, `RISKY`, `WRONG`
 - 관련 학습 문서 추천
 - 초기/최종 아키텍처 컴포넌트 배열과 최소 graph 응답 반환
+- 사용자 작성 아키텍처 저장/조회/수정/삭제
 - local profile 기준 초기 seed 데이터 제공
 
 ## 기술 스택
@@ -253,6 +254,78 @@ curl -X POST http://localhost:8080/api/scenarios/1/simulate \
 - 핵심 선택지가 없는 시나리오는 유효한 선택지만으로 `GOOD`이 될 수 있습니다.
 - `effects`는 `performance`, `availability`, `cost`, `complexity`, `consistency`, `security` 관점의 고정 효과입니다. 값은 `-3`부터 `3`이며 양수는 이점, 음수는 부담을 뜻합니다. `cost`와 `complexity`의 양수는 비용과 복잡도가 줄어드는 효과입니다.
 - `tradeOffSummary`는 중복을 제거한 선택지들의 효과를 차원별로 단순 합산합니다. 이 요약은 비교와 설명에만 사용하며 기존 결과 타입 판정에는 영향을 주지 않습니다.
+
+## 사용자 아키텍처 API 예시
+
+현재 MVP에는 사용자 인증과 소유권 모델이 없으므로 저장된 아키텍처는 단순 ID 기준으로 조회, 수정, 삭제합니다.
+
+### 아키텍처 생성
+
+```bash
+curl -X POST http://localhost:8080/api/user-architectures \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "title": "이벤트 조회 아키텍처",
+    "description": "조회 트래픽 분산을 연습합니다.",
+    "nodes": [
+      { "id": "ec2-1", "resourceType": "EC2", "displayName": "API 서버" },
+      { "id": "rds-1", "resourceType": "RDS", "displayName": "주 데이터베이스" }
+    ],
+    "connections": [
+      { "id": "conn-1", "sourceNodeId": "ec2-1", "targetNodeId": "rds-1", "connectionType": "REQUEST_FLOW" }
+    ]
+  }'
+```
+
+응답은 `201 Created`이며 `Location: /api/user-architectures/{architectureId}` 헤더와 상세 그래프를 반환합니다.
+
+```json
+{
+  "architectureId": "5a4b25b7-4a03-4df1-9e45-826302e6bf63",
+  "title": "이벤트 조회 아키텍처",
+  "description": "조회 트래픽 분산을 연습합니다.",
+  "createdAt": "2026-06-08T00:00:00Z",
+  "updatedAt": "2026-06-08T00:00:00Z",
+  "nodes": [
+    { "id": "ec2-1", "resourceType": "EC2", "displayName": "API 서버" },
+    { "id": "rds-1", "resourceType": "RDS", "displayName": "주 데이터베이스" }
+  ],
+  "connections": [
+    { "id": "conn-1", "sourceNodeId": "ec2-1", "targetNodeId": "rds-1", "connectionType": "REQUEST_FLOW" }
+  ]
+}
+```
+
+### 목록과 상세 조회
+
+```bash
+curl http://localhost:8080/api/user-architectures
+curl http://localhost:8080/api/user-architectures/5a4b25b7-4a03-4df1-9e45-826302e6bf63
+```
+
+목록 응답은 상세 그래프 전체 대신 `nodeCount`, `connectionCount`만 포함합니다.
+
+### 아키텍처 수정과 삭제
+
+```bash
+curl -X PUT http://localhost:8080/api/user-architectures/5a4b25b7-4a03-4df1-9e45-826302e6bf63 \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "title": "ALB 추가 아키텍처",
+    "description": "트래픽 분산 진입점을 추가합니다.",
+    "nodes": [
+      { "id": "alb-1", "resourceType": "ALB", "displayName": "ALB" },
+      { "id": "ec2-1", "resourceType": "EC2", "displayName": "API 서버" }
+    ],
+    "connections": [
+      { "id": "conn-1", "sourceNodeId": "alb-1", "targetNodeId": "ec2-1", "connectionType": "REQUEST_FLOW" }
+    ]
+  }'
+
+curl -X DELETE http://localhost:8080/api/user-architectures/5a4b25b7-4a03-4df1-9e45-826302e6bf63
+```
+
+존재하지 않는 ID는 `USER_ARCHITECTURE_NOT_FOUND`, 잘못된 노드/연결 요청은 `INVALID_USER_ARCHITECTURE_REQUEST` 에러 응답을 반환합니다.
 
 ### 장애 영향 흐름 응답
 
