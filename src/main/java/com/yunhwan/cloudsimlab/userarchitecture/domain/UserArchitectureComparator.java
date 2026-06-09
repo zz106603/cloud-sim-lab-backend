@@ -1,13 +1,11 @@
 package com.yunhwan.cloudsimlab.userarchitecture.domain;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,6 +25,30 @@ import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureCompariso
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureComparisonResult.TradeOffReference;
 
 public final class UserArchitectureComparator {
+
+	private static final Map<String, UserArchitectureResourceType> RESOURCE_TYPES_BY_SCENARIO_LABEL = Map.ofEntries(
+			Map.entry("Client", UserArchitectureResourceType.CLIENT),
+			Map.entry("VPC", UserArchitectureResourceType.VPC),
+			Map.entry("Public subnet", UserArchitectureResourceType.SUBNET),
+			Map.entry("Private subnet", UserArchitectureResourceType.SUBNET),
+			Map.entry("EC2", UserArchitectureResourceType.EC2),
+			Map.entry("Application server", UserArchitectureResourceType.EC2),
+			Map.entry("ALB", UserArchitectureResourceType.ALB),
+			Map.entry("Target Group", UserArchitectureResourceType.TARGET_GROUP),
+			Map.entry("Auto Scaling", UserArchitectureResourceType.AUTO_SCALING_GROUP),
+			Map.entry("RDS", UserArchitectureResourceType.RDS),
+			Map.entry("RDS Standby", UserArchitectureResourceType.RDS_STANDBY),
+			Map.entry("Read Replica", UserArchitectureResourceType.READ_REPLICA),
+			Map.entry("Redis", UserArchitectureResourceType.REDIS),
+			Map.entry("Connection Pool", UserArchitectureResourceType.CONNECTION_POOL),
+			Map.entry("Health Check", UserArchitectureResourceType.HEALTH_CHECK),
+			Map.entry("NAT Gateway", UserArchitectureResourceType.NAT_GATEWAY),
+			Map.entry("Internet Gateway", UserArchitectureResourceType.INTERNET_GATEWAY),
+			Map.entry("Security Group", UserArchitectureResourceType.SECURITY_GROUP),
+			Map.entry("ALB Security Group", UserArchitectureResourceType.SECURITY_GROUP),
+			Map.entry("EC2 Security Group", UserArchitectureResourceType.SECURITY_GROUP),
+			Map.entry("RDS Security Group", UserArchitectureResourceType.SECURITY_GROUP)
+	);
 
 	private UserArchitectureComparator() {
 	}
@@ -206,7 +228,6 @@ public final class UserArchitectureComparator {
 
 	private static <T> Map<String, T> toMap(List<T> values, Function<T, String> keyExtractor) {
 		return values.stream()
-				.sorted(Comparator.comparing(keyExtractor))
 				.collect(Collectors.toMap(keyExtractor, Function.identity(), (first, ignored) -> first, LinkedHashMap::new));
 	}
 
@@ -275,34 +296,12 @@ public final class UserArchitectureComparator {
 
 		private static UserArchitectureResourceType resourceTypeOf(ArchitectureNode node) {
 			String label = node.label() == null ? "" : node.label().trim();
-			Map<String, UserArchitectureResourceType> byLabel = Map.ofEntries(
-					Map.entry("Client", UserArchitectureResourceType.CLIENT),
-					Map.entry("VPC", UserArchitectureResourceType.VPC),
-					Map.entry("Public subnet", UserArchitectureResourceType.SUBNET),
-					Map.entry("Private subnet", UserArchitectureResourceType.SUBNET),
-					Map.entry("EC2", UserArchitectureResourceType.EC2),
-					Map.entry("Application server", UserArchitectureResourceType.EC2),
-					Map.entry("ALB", UserArchitectureResourceType.ALB),
-					Map.entry("Target Group", UserArchitectureResourceType.TARGET_GROUP),
-					Map.entry("Auto Scaling", UserArchitectureResourceType.AUTO_SCALING_GROUP),
-					Map.entry("RDS", UserArchitectureResourceType.RDS),
-					Map.entry("RDS Standby", UserArchitectureResourceType.RDS_STANDBY),
-					Map.entry("Read Replica", UserArchitectureResourceType.READ_REPLICA),
-					Map.entry("Redis", UserArchitectureResourceType.REDIS),
-					Map.entry("Connection Pool", UserArchitectureResourceType.CONNECTION_POOL),
-					Map.entry("Health Check", UserArchitectureResourceType.HEALTH_CHECK),
-					Map.entry("NAT Gateway", UserArchitectureResourceType.NAT_GATEWAY),
-					Map.entry("Internet Gateway", UserArchitectureResourceType.INTERNET_GATEWAY),
-					Map.entry("Security Group", UserArchitectureResourceType.SECURITY_GROUP),
-					Map.entry("ALB Security Group", UserArchitectureResourceType.SECURITY_GROUP),
-					Map.entry("EC2 Security Group", UserArchitectureResourceType.SECURITY_GROUP),
-					Map.entry("RDS Security Group", UserArchitectureResourceType.SECURITY_GROUP)
-			);
-			UserArchitectureResourceType mapped = byLabel.get(label);
+			UserArchitectureResourceType mapped = RESOURCE_TYPES_BY_SCENARIO_LABEL.get(label);
 			if (mapped != null) {
 				return mapped;
 			}
-			return switch (node.type()) {
+			String nodeType = node.type() == null ? "" : node.type();
+			return switch (nodeType) {
 				case "CLIENT" -> UserArchitectureResourceType.CLIENT;
 				case "ALB" -> UserArchitectureResourceType.ALB;
 				case "AUTO_SCALING" -> UserArchitectureResourceType.AUTO_SCALING_GROUP;
