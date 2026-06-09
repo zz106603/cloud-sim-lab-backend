@@ -76,7 +76,7 @@ public final class UserArchitectureValidator {
 			));
 		}
 
-		return new UserArchitectureValidationResult(false, errors, warnings, guidance);
+		return new UserArchitectureValidationResult(errors.isEmpty(), errors, warnings, guidance);
 	}
 
 	private static Map<String, ValidatedNode> validateNodes(List<DraftNode> nodes, List<UserArchitectureValidationIssue> errors) {
@@ -237,7 +237,9 @@ public final class UserArchitectureValidator {
 			boolean hasAlbEntry = containsApplication && connections.stream()
 					.anyMatch(connection -> connection.connectionType() == UserArchitectureConnectionType.REQUEST_FLOW
 							&& connection.source().resourceType() == UserArchitectureResourceType.ALB
-							&& (APPLICATION_RESOURCES.contains(connection.target().resourceType()) || connection.target().id().equals(privateSubnet.id())));
+							&& (APPLICATION_RESOURCES.contains(connection.target().resourceType())
+									|| connection.target().resourceType() == UserArchitectureResourceType.TARGET_GROUP
+									|| connection.target().id().equals(privateSubnet.id())));
 			if (containsApplication && !hasAlbEntry) {
 				warnings.add(issue(WARNING, "PRIVATE_SUBNET_ENTRY_MISSING", "NODE", privateSubnet.id(), "Private subnet 애플리케이션의 진입 경로가 보이지 않습니다.", "외부 요청을 받아야 하는 서버라면 ALB 같은 공개 진입점과 내부 전달 경로를 분리해야 합니다."));
 			}
@@ -296,8 +298,7 @@ public final class UserArchitectureValidator {
 	private static Map<String, List<String>> directedGraph(List<ValidatedConnection> connections) {
 		Map<String, List<String>> graph = new HashMap<>();
 		for (ValidatedConnection connection : connections) {
-			if (connection.connectionType() == UserArchitectureConnectionType.SECURITY_RULE
-					|| connection.connectionType() == UserArchitectureConnectionType.NETWORK_ROUTE) {
+			if (connection.connectionType() != UserArchitectureConnectionType.REQUEST_FLOW) {
 				continue;
 			}
 			graph.computeIfAbsent(connection.source().id(), ignored -> new ArrayList<>())
