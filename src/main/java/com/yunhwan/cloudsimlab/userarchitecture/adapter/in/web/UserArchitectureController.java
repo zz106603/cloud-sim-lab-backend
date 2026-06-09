@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.CatalogResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.DetailResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.SaveRequest;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.SummaryResponse;
@@ -32,6 +33,11 @@ public class UserArchitectureController {
 	) {
 		this.getUserArchitectureUseCase = getUserArchitectureUseCase;
 		this.manageUserArchitectureUseCase = manageUserArchitectureUseCase;
+	}
+
+	@GetMapping("/catalog")
+	public CatalogResponse catalog() {
+		return CatalogResponse.fromSupportedTypes();
 	}
 
 	@GetMapping
