@@ -13,17 +13,20 @@ import com.yunhwan.cloudsimlab.userarchitecture.application.port.UserArchitectur
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.UserArchitectureQueryPort;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.GetUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase;
-import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.ConnectionCommand;
-import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.CreateUserArchitectureCommand;
-import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.NodeCommand;
-import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.UpdateUserArchitectureCommand;
+import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase;
+import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase.ValidateUserArchitectureCommand;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitecture;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureConnection;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureNode;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidationResult;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidator;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidator.DraftArchitecture;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidator.DraftConnection;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidator.DraftNode;
 
 @Service
 @Transactional(readOnly = true)
-public class UserArchitectureService implements GetUserArchitectureUseCase, ManageUserArchitectureUseCase {
+public class UserArchitectureService implements GetUserArchitectureUseCase, ManageUserArchitectureUseCase, ValidateUserArchitectureUseCase {
 
 	private final UserArchitectureQueryPort queryPort;
 	private final UserArchitectureCommandPort commandPort;
@@ -52,8 +55,37 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 	}
 
 	@Override
+	public UserArchitectureValidationResult validate(ValidateUserArchitectureCommand command) {
+		if (command == null) {
+			throw new InvalidUserArchitectureRequestException("request body must not be null");
+		}
+		return UserArchitectureValidator.validate(new DraftArchitecture(
+				toDraftNodes(command.nodes()),
+				toDraftConnections(command.connections())
+		));
+	}
+
+	@Override
+	public UserArchitectureValidationResult validateSaved(String architectureId) {
+		UserArchitecture architecture = findOne(architectureId);
+		return UserArchitectureValidator.validate(new DraftArchitecture(
+				architecture.getNodes().stream()
+						.map(node -> new DraftNode(node.id(), node.resourceType().name(), node.displayName()))
+						.toList(),
+				architecture.getConnections().stream()
+						.map(connection -> new DraftConnection(
+								connection.id(),
+								connection.sourceNodeId(),
+								connection.targetNodeId(),
+								connection.connectionType().name()
+						))
+						.toList()
+		));
+	}
+
+	@Override
 	@Transactional
-	public UserArchitecture create(CreateUserArchitectureCommand command) {
+	public UserArchitecture create(ManageUserArchitectureUseCase.CreateUserArchitectureCommand command) {
 		if (command == null) {
 			throw new InvalidUserArchitectureRequestException("request body must not be null");
 		}
@@ -64,7 +96,7 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 
 	@Override
 	@Transactional
-	public UserArchitecture update(String architectureId, UpdateUserArchitectureCommand command) {
+	public UserArchitecture update(String architectureId, ManageUserArchitectureUseCase.UpdateUserArchitectureCommand command) {
 		if (command == null) {
 			throw new InvalidUserArchitectureRequestException("request body must not be null");
 		}
@@ -89,8 +121,8 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 			String description,
 			Instant createdAt,
 			Instant updatedAt,
-			List<NodeCommand> nodeCommands,
-			List<ConnectionCommand> connectionCommands
+			List<ManageUserArchitectureUseCase.NodeCommand> nodeCommands,
+			List<ManageUserArchitectureUseCase.ConnectionCommand> connectionCommands
 	) {
 		try {
 			return new UserArchitecture(
@@ -108,7 +140,7 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 		}
 	}
 
-	private List<UserArchitectureNode> toNodes(List<NodeCommand> commands) {
+	private List<UserArchitectureNode> toNodes(List<ManageUserArchitectureUseCase.NodeCommand> commands) {
 		if (commands == null) {
 			return List.of();
 		}
@@ -117,7 +149,7 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 				.toList();
 	}
 
-	private List<UserArchitectureConnection> toConnections(List<ConnectionCommand> commands) {
+	private List<UserArchitectureConnection> toConnections(List<ManageUserArchitectureUseCase.ConnectionCommand> commands) {
 		if (commands == null) {
 			return List.of();
 		}
@@ -126,14 +158,14 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 				.toList();
 	}
 
-	private UserArchitectureNode toNode(NodeCommand command) {
+	private UserArchitectureNode toNode(ManageUserArchitectureUseCase.NodeCommand command) {
 		if (command == null) {
 			throw new InvalidUserArchitectureRequestException("nodes must not contain null");
 		}
 		return new UserArchitectureNode(command.id(), command.resourceType(), command.displayName());
 	}
 
-	private UserArchitectureConnection toConnection(ConnectionCommand command) {
+	private UserArchitectureConnection toConnection(ManageUserArchitectureUseCase.ConnectionCommand command) {
 		if (command == null) {
 			throw new InvalidUserArchitectureRequestException("connections must not contain null");
 		}
@@ -143,5 +175,28 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 				command.targetNodeId(),
 				command.connectionType()
 		);
+	}
+
+	private List<DraftNode> toDraftNodes(List<ValidateUserArchitectureUseCase.NodeCommand> commands) {
+		if (commands == null) {
+			return List.of();
+		}
+		return commands.stream()
+				.map(command -> command == null ? null : new DraftNode(command.id(), command.resourceType(), command.displayName()))
+				.toList();
+	}
+
+	private List<DraftConnection> toDraftConnections(List<ValidateUserArchitectureUseCase.ConnectionCommand> commands) {
+		if (commands == null) {
+			return List.of();
+		}
+		return commands.stream()
+				.map(command -> command == null ? null : new DraftConnection(
+						command.id(),
+						command.sourceNodeId(),
+						command.targetNodeId(),
+						command.connectionType()
+				))
+				.toList();
 	}
 }
