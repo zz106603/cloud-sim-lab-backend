@@ -122,7 +122,7 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 			throw new InvalidUserArchitectureRequestException("scenarioId must not be null");
 		}
 		if (scenarioQueryPort == null) {
-			throw new InvalidUserArchitectureRequestException("scenario comparison is not available");
+			throw new IllegalStateException("scenario comparison requires ScenarioQueryPort");
 		}
 		UserArchitecture architecture = findOne(architectureId);
 		Scenario scenario = scenarioQueryPort.findById(scenarioId)
