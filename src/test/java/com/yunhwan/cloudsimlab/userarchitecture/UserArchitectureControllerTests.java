@@ -28,6 +28,26 @@ class UserArchitectureControllerTests {
 	private MockMvc mockMvc;
 
 	@Test
+	void 빌더용_리소스와_연결_카탈로그를_조회할_수_있다() throws Exception {
+		mockMvc.perform(get("/api/user-architectures/catalog"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resourceTypes", hasSize(17)))
+				.andExpect(jsonPath("$.resourceTypes[0].key").value("CLIENT"))
+				.andExpect(jsonPath("$.resourceTypes[0].displayName").value("Client"))
+				.andExpect(jsonPath("$.resourceTypes[0].description").value("사용자 요청이 시작되는 외부 클라이언트입니다."))
+				.andExpect(jsonPath("$.resourceTypes[0].visualizationCategory").value("ACTOR"))
+				.andExpect(jsonPath("$.resourceTypes[0].learningPurpose").value("요청 흐름의 시작점과 외부 노출 경계를 표시할 때 사용합니다."))
+				.andExpect(jsonPath("$.resourceTypes[3].key").value("EC2"))
+				.andExpect(jsonPath("$.resourceTypes[5].key").value("TARGET_GROUP"))
+				.andExpect(jsonPath("$.resourceTypes[11].key").value("CONNECTION_POOL"))
+				.andExpect(jsonPath("$.connectionTypes", hasSize(5)))
+				.andExpect(jsonPath("$.connectionTypes[0].key").value("REQUEST_FLOW"))
+				.andExpect(jsonPath("$.connectionTypes[0].displayName").value("Request Flow"))
+				.andExpect(jsonPath("$.connectionTypes[0].meaning").value("사용자 요청이나 애플리케이션 호출이 source에서 target으로 전달되는 흐름입니다."))
+				.andExpect(jsonPath("$.connectionTypes[3].key").value("REPLICATION"));
+	}
+
+	@Test
 	void 아키텍처를_생성하고_ID로_다시_조회할_수_있다() throws Exception {
 		String architectureId = createArchitecture();
 
