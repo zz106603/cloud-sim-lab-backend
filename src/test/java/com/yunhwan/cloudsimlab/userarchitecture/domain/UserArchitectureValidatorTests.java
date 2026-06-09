@@ -95,6 +95,44 @@ class UserArchitectureValidatorTests {
 	}
 
 	@Test
+	void ALB가_Target_Group으로_전달하면_Private_subnet_진입_경고를_내지_않는다() {
+		UserArchitectureValidationResult result = UserArchitectureValidator.validate(new DraftArchitecture(
+				List.of(
+						new DraftNode("alb-1", "ALB", "ALB"),
+						new DraftNode("target-group-1", "TARGET_GROUP", "Target Group"),
+						new DraftNode("private-subnet-1", "SUBNET", "Private subnet"),
+						new DraftNode("ec2-1", "EC2", "API 서버"),
+						new DraftNode("nat-1", "NAT_GATEWAY", "NAT Gateway")
+				),
+				List.of(
+						new DraftConnection("conn-1", "alb-1", "target-group-1", "REQUEST_FLOW"),
+						new DraftConnection("conn-2", "target-group-1", "ec2-1", "REQUEST_FLOW"),
+						new DraftConnection("conn-3", "private-subnet-1", "ec2-1", "DEPENDS_ON"),
+						new DraftConnection("conn-4", "private-subnet-1", "nat-1", "NETWORK_ROUTE")
+				)
+		));
+
+		assertThat(result.warnings())
+				.extracting(UserArchitectureValidationIssue::code)
+				.doesNotContain("PRIVATE_SUBNET_ENTRY_MISSING", "ALB_TARGET_MISSING");
+	}
+
+	@Test
+	void 데이터_저장소_도달성은_DEPENDS_ON이_아닌_REQUEST_FLOW만_인정한다() {
+		UserArchitectureValidationResult result = UserArchitectureValidator.validate(new DraftArchitecture(
+				List.of(
+						new DraftNode("ec2-1", "EC2", "API 서버"),
+						new DraftNode("rds-1", "RDS", "DB")
+				),
+				List.of(new DraftConnection("conn-1", "ec2-1", "rds-1", "DEPENDS_ON"))
+		));
+
+		assertThat(result.warnings())
+				.extracting(UserArchitectureValidationIssue::code)
+				.contains("APPLICATION_DATA_PATH_MISSING");
+	}
+
+	@Test
 	void 같은_입력은_항상_같은_검증_결과를_반환한다() {
 		DraftArchitecture architecture = new DraftArchitecture(
 				List.of(
