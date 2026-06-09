@@ -232,6 +232,12 @@ final class UserArchitectureDtos {
 		}
 	}
 
+	record CompareRequest(
+			String baseArchitectureId,
+			String targetArchitectureId
+	) {
+	}
+
 	record SaveRequest(
 			String title,
 			String description,

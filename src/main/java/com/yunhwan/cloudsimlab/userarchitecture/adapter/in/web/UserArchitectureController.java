@@ -15,15 +15,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.CompareRequest;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.CatalogResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.DetailResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.SaveRequest;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.SummaryResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.ValidationRequest;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.ValidationResponse;
+import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.CompareUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.GetUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase;
+import com.yunhwan.cloudsimlab.userarchitecture.application.InvalidUserArchitectureRequestException;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureComparisonResult;
 
 @RestController
 @RequestMapping("/api/user-architectures")
@@ -32,15 +36,18 @@ public class UserArchitectureController {
 	private final GetUserArchitectureUseCase getUserArchitectureUseCase;
 	private final ManageUserArchitectureUseCase manageUserArchitectureUseCase;
 	private final ValidateUserArchitectureUseCase validateUserArchitectureUseCase;
+	private final CompareUserArchitectureUseCase compareUserArchitectureUseCase;
 
 	public UserArchitectureController(
 			GetUserArchitectureUseCase getUserArchitectureUseCase,
 			ManageUserArchitectureUseCase manageUserArchitectureUseCase,
-			ValidateUserArchitectureUseCase validateUserArchitectureUseCase
+			ValidateUserArchitectureUseCase validateUserArchitectureUseCase,
+			CompareUserArchitectureUseCase compareUserArchitectureUseCase
 	) {
 		this.getUserArchitectureUseCase = getUserArchitectureUseCase;
 		this.manageUserArchitectureUseCase = manageUserArchitectureUseCase;
 		this.validateUserArchitectureUseCase = validateUserArchitectureUseCase;
+		this.compareUserArchitectureUseCase = compareUserArchitectureUseCase;
 	}
 
 	@GetMapping("/catalog")
@@ -65,9 +72,25 @@ public class UserArchitectureController {
 		));
 	}
 
+	@PostMapping("/compare")
+	public UserArchitectureComparisonResult compare(@RequestBody CompareRequest request) {
+		if (request == null) {
+			throw new InvalidUserArchitectureRequestException("request body must not be null");
+		}
+		return compareUserArchitectureUseCase.compareSaved(request.baseArchitectureId(), request.targetArchitectureId());
+	}
+
 	@GetMapping("/{architectureId}")
 	public DetailResponse findOne(@PathVariable String architectureId) {
 		return DetailResponse.from(getUserArchitectureUseCase.findOne(architectureId));
+	}
+
+	@GetMapping("/{architectureId}/comparison/scenarios/{scenarioId}")
+	public UserArchitectureComparisonResult compareWithScenario(
+			@PathVariable String architectureId,
+			@PathVariable Long scenarioId
+	) {
+		return compareUserArchitectureUseCase.compareWithScenarioRecommendation(architectureId, scenarioId);
 	}
 
 	@GetMapping("/{architectureId}/validation")
