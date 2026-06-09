@@ -1,6 +1,7 @@
 package com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.ConnectionCommand;
@@ -88,6 +89,54 @@ final class UserArchitectureDtos {
 					connection.sourceNodeId(),
 					connection.targetNodeId(),
 					connection.connectionType()
+			);
+		}
+	}
+
+	record CatalogResponse(
+			List<ResourceTypeResponse> resourceTypes,
+			List<ConnectionTypeResponse> connectionTypes
+	) {
+		static CatalogResponse fromSupportedTypes() {
+			return new CatalogResponse(
+					Arrays.stream(UserArchitectureResourceType.values())
+							.map(ResourceTypeResponse::from)
+							.toList(),
+					Arrays.stream(UserArchitectureConnectionType.values())
+							.map(ConnectionTypeResponse::from)
+							.toList()
+			);
+		}
+	}
+
+	record ResourceTypeResponse(
+			String key,
+			String displayName,
+			String description,
+			String visualizationCategory,
+			String learningPurpose
+	) {
+		static ResourceTypeResponse from(UserArchitectureResourceType resourceType) {
+			return new ResourceTypeResponse(
+					resourceType.getKey(),
+					resourceType.getDisplayName(),
+					resourceType.getDescription(),
+					resourceType.getVisualizationCategory(),
+					resourceType.getLearningPurpose()
+			);
+		}
+	}
+
+	record ConnectionTypeResponse(
+			String key,
+			String displayName,
+			String meaning
+	) {
+		static ConnectionTypeResponse from(UserArchitectureConnectionType connectionType) {
+			return new ConnectionTypeResponse(
+					connectionType.getKey(),
+					connectionType.getDisplayName(),
+					connectionType.getMeaning()
 			);
 		}
 	}
