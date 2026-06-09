@@ -9,13 +9,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.yunhwan.cloudsimlab.scenario.application.ScenarioNotFoundException;
+import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
+import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.UserArchitectureCommandPort;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.UserArchitectureQueryPort;
+import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.CompareUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.GetUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase.ValidateUserArchitectureCommand;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitecture;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureComparator;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureComparisonResult;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureConnection;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureNode;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidationResult;
@@ -26,20 +33,35 @@ import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidator
 
 @Service
 @Transactional(readOnly = true)
-public class UserArchitectureService implements GetUserArchitectureUseCase, ManageUserArchitectureUseCase, ValidateUserArchitectureUseCase {
+public class UserArchitectureService implements GetUserArchitectureUseCase, ManageUserArchitectureUseCase, ValidateUserArchitectureUseCase, CompareUserArchitectureUseCase {
 
 	private final UserArchitectureQueryPort queryPort;
 	private final UserArchitectureCommandPort commandPort;
+	private final ScenarioQueryPort scenarioQueryPort;
 	private final Clock clock;
 
 	@Autowired
-	public UserArchitectureService(UserArchitectureQueryPort queryPort, UserArchitectureCommandPort commandPort) {
-		this(queryPort, commandPort, Clock.systemUTC());
+	public UserArchitectureService(
+			UserArchitectureQueryPort queryPort,
+			UserArchitectureCommandPort commandPort,
+			ScenarioQueryPort scenarioQueryPort
+	) {
+		this(queryPort, commandPort, scenarioQueryPort, Clock.systemUTC());
 	}
 
 	UserArchitectureService(UserArchitectureQueryPort queryPort, UserArchitectureCommandPort commandPort, Clock clock) {
+		this(queryPort, commandPort, null, clock);
+	}
+
+	UserArchitectureService(
+			UserArchitectureQueryPort queryPort,
+			UserArchitectureCommandPort commandPort,
+			ScenarioQueryPort scenarioQueryPort,
+			Clock clock
+	) {
 		this.queryPort = queryPort;
 		this.commandPort = commandPort;
+		this.scenarioQueryPort = scenarioQueryPort;
 		this.clock = clock;
 	}
 
@@ -81,6 +103,35 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 						))
 						.toList()
 		));
+	}
+
+	@Override
+	public UserArchitectureComparisonResult compareSaved(String baseArchitectureId, String targetArchitectureId) {
+		if (baseArchitectureId == null || baseArchitectureId.isBlank()) {
+			throw new InvalidUserArchitectureRequestException("baseArchitectureId must not be blank");
+		}
+		if (targetArchitectureId == null || targetArchitectureId.isBlank()) {
+			throw new InvalidUserArchitectureRequestException("targetArchitectureId must not be blank");
+		}
+		return UserArchitectureComparator.compare(findOne(baseArchitectureId), findOne(targetArchitectureId));
+	}
+
+	@Override
+	public UserArchitectureComparisonResult compareWithScenarioRecommendation(String architectureId, Long scenarioId) {
+		if (scenarioId == null) {
+			throw new InvalidUserArchitectureRequestException("scenarioId must not be null");
+		}
+		if (scenarioQueryPort == null) {
+			throw new InvalidUserArchitectureRequestException("scenario comparison is not available");
+		}
+		UserArchitecture architecture = findOne(architectureId);
+		Scenario scenario = scenarioQueryPort.findById(scenarioId)
+				.orElseThrow(() -> new ScenarioNotFoundException(scenarioId));
+		List<ScenarioOption> recommendedOptions = recommendedOptionsFor(scenario);
+		if (recommendedOptions.isEmpty()) {
+			throw new InvalidUserArchitectureRequestException("scenario has no comparable recommended options: " + scenarioId);
+		}
+		return UserArchitectureComparator.compareWithScenarioRecommendation(architecture, scenario, recommendedOptions);
 	}
 
 	@Override
@@ -197,6 +248,18 @@ public class UserArchitectureService implements GetUserArchitectureUseCase, Mana
 						command.targetNodeId(),
 						command.connectionType()
 				))
+				.toList();
+	}
+
+	private List<ScenarioOption> recommendedOptionsFor(Scenario scenario) {
+		List<ScenarioOption> coreOptions = scenario.getOptions().stream()
+				.filter(ScenarioOption::isCore)
+				.toList();
+		if (!coreOptions.isEmpty()) {
+			return coreOptions;
+		}
+		return scenario.getOptions().stream()
+				.filter(option -> option.getScore() > 0)
 				.toList();
 	}
 }
