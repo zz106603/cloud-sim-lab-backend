@@ -342,6 +342,100 @@ Read Replica 추가도 조회 트래픽 분산에 도움이 된다.
 
 이 검증은 전체 AWS Well-Architected Framework 평가, 실제 보안 취약점 스캔, 비용/성능 예측, 자동 수정 기능이 아니다. 현재 카탈로그와 학습 시나리오 안에서 설명 가능한 최소 규칙만 다루며, 같은 입력은 항상 같은 결과를 반환해야 한다.
 
+# 7.4 사용자 작성 아키텍처 비교
+
+사용자 작성 아키텍처 비교는 두 구조 사이의 추가, 제거, 변경, 유지 항목을 결정적으로 반환한다. 이 기능은 어느 아키텍처가 더 좋은지 자동 판정하지 않고, 구조 차이를 학습자가 해석할 수 있는 형태로 제공한다.
+
+## 사용자 아키텍처 간 비교
+
+두 저장된 사용자 아키텍처는 안정적인 ID를 기준으로 비교한다.
+
+- 같은 노드 ID가 양쪽에 있고 리소스 타입과 표시 이름이 같으면 `UNCHANGED`
+- 같은 노드 ID가 양쪽에 있지만 리소스 타입 또는 표시 이름이 다르면 `CHANGED`
+- 기준 아키텍처에만 있으면 `REMOVED`
+- 비교 대상 아키텍처에만 있으면 `ADDED`
+
+연결도 같은 기준을 따른다. 연결 ID가 같고 source, target, 연결 타입이 같으면 유지로 보고, 하나라도 다르면 변경으로 본다. 입력 배열 순서는 비교 결과에 영향을 주지 않는다.
+
+요청 예시는 다음과 같다.
+
+```http
+POST /api/user-architectures/compare
+Content-Type: application/json
+
+{
+  "baseArchitectureId": "base-architecture-id",
+  "targetArchitectureId": "target-architecture-id"
+}
+```
+
+## 시나리오 권장 구조와 비교
+
+사용자 아키텍처와 시나리오 권장 구조 비교는 다음 API로 조회한다.
+
+```http
+GET /api/user-architectures/{architectureId}/comparison/scenarios/{scenarioId}
+```
+
+시나리오 권장 구조는 해당 시나리오의 핵심 선택지(`core=true`)를 적용한 최종 그래프를 기준으로 만든다. 핵심 선택지가 없으면 양수 점수 선택지를 권장 후보로 사용한다.
+
+시나리오 권장 구조와 비교할 때는 사용자 노드 ID가 아니라 리소스 타입과 표시 이름을 정규화한 컴포넌트 signature를 기준으로 비교한다. 이 방식은 서버가 만든 시나리오 그래프의 node id와 사용자가 직접 만든 node id가 달라도 같은 컴포넌트를 같은 의미로 비교하기 위한 것이다.
+
+결과에는 다음 항목이 포함된다.
+
+- 기준 아키텍처와 비교 대상 아키텍처 요약
+- 리소스 추가, 제거, 변경, 유지 목록
+- 연결 추가, 제거, 변경, 유지 목록
+- 시나리오 권장 구조 대비 누락된 컴포넌트
+- 시나리오 권장 구조에는 없는 추가 컴포넌트
+- 시나리오 학습 목표에 영향을 줄 수 있는 차이
+- 권장 선택지에 정의된 trade-off 정보
+
+응답 예시는 다음과 같다.
+
+```json
+{
+  "base": {
+    "comparisonType": "SCENARIO_RECOMMENDATION",
+    "id": "1",
+    "title": "단일 Spring Boot 배포",
+    "resourceCount": 5,
+    "connectionCount": 5
+  },
+  "target": {
+    "comparisonType": "USER_ARCHITECTURE",
+    "id": "user-architecture-id",
+    "title": "사용자 구조",
+    "resourceCount": 3,
+    "connectionCount": 2
+  },
+  "scenarioComparison": {
+    "scenarioId": 1,
+    "scenarioTitle": "단일 Spring Boot 배포",
+    "learningGoal": "단일 장애 지점을 줄입니다.",
+    "missingRecommendedResources": [],
+    "extraResources": [],
+    "learningImpacts": []
+  },
+  "tradeOffReferences": [
+    {
+      "optionName": "ALB와 Auto Scaling 추가",
+      "reason": "시나리오 권장 구조를 만드는 핵심 선택지의 trade-off입니다.",
+      "effects": {
+        "performance": 3,
+        "availability": 3,
+        "cost": -2,
+        "complexity": -2,
+        "consistency": 0,
+        "security": 1
+      }
+    }
+  ]
+}
+```
+
+비교 기능은 그래프 레이아웃 위치, 비용/성능 점수, 아키텍처 우열, AI 요약을 다루지 않는다.
+
 ## 기본 방어 규칙
 
 - 아키텍처 ID와 제목은 비어 있을 수 없다.

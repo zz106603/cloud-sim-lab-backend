@@ -21,6 +21,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioSeedPort;
+import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -28,6 +35,9 @@ class UserArchitectureControllerTests {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private ScenarioSeedPort scenarioSeedPort;
 
 	@Test
 	void 빌더용_리소스와_연결_카탈로그를_조회할_수_있다() throws Exception {
@@ -111,6 +121,58 @@ class UserArchitectureControllerTests {
 				.andExpect(jsonPath("$.errors", hasSize(0)))
 				.andExpect(jsonPath("$.warnings", hasSize(0)))
 				.andExpect(jsonPath("$.guidance[*].code", hasItems("SECURITY_BOUNDARY_REVIEW")));
+	}
+
+	@Test
+	void 두_저장된_아키텍처를_비교할_수_있다() throws Exception {
+		String baseArchitectureId = createArchitecture();
+		String targetArchitectureId = createAlbArchitecture();
+
+		mockMvc.perform(post("/api/user-architectures/compare")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"baseArchitectureId":"%s","targetArchitectureId":"%s"}
+								""".formatted(baseArchitectureId, targetArchitectureId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.base.id").value(baseArchitectureId))
+				.andExpect(jsonPath("$.target.id").value(targetArchitectureId))
+				.andExpect(jsonPath("$.resources.added[*].resourceId", hasItems("alb-1")))
+				.andExpect(jsonPath("$.resources.unchanged[*].resourceId", hasItems("ec2-1")))
+				.andExpect(jsonPath("$.connections.changed", hasSize(1)))
+				.andExpect(jsonPath("$.scenarioComparison").doesNotExist());
+	}
+
+	@Test
+	void 사용자_아키텍처를_시나리오_권장_구조와_비교할_수_있다() throws Exception {
+		Scenario scenario = scenarioSeedPort.save(Scenario.newScenarioWithGraphKey(
+				"single-spring-boot",
+				"단일 Spring Boot 배포",
+				ScenarioCategory.COMPUTE,
+				ScenarioLevel.BEGINNER,
+				"단일 장애 지점을 줄입니다.",
+				"설명",
+				java.util.List.of("Client", "EC2", "RDS"),
+				java.util.List.of(ScenarioOption.newOptionWithGraphKey(
+						"add-alb-auto-scaling",
+						"ALB와 Auto Scaling 추가",
+						"정상 인스턴스로 요청을 분산합니다.",
+						3,
+						true,
+						0,
+						new TradeOffEffects(3, 3, -2, -2, 0, 1)
+				))
+		));
+		String architectureId = createArchitecture();
+
+		mockMvc.perform(get("/api/user-architectures/{architectureId}/comparison/scenarios/{scenarioId}", architectureId, scenario.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.base.comparisonType").value("SCENARIO_RECOMMENDATION"))
+				.andExpect(jsonPath("$.target.id").value(architectureId))
+				.andExpect(jsonPath("$.scenarioComparison.scenarioId").value(scenario.getId()))
+				.andExpect(jsonPath("$.scenarioComparison.missingRecommendedResources[*].baseResourceType", hasItems("ALB", "AUTO_SCALING_GROUP")))
+				.andExpect(jsonPath("$.scenarioComparison.learningImpacts[*].code", hasItems("RECOMMENDED_RESOURCE_MISSING")))
+				.andExpect(jsonPath("$.tradeOffReferences[0].optionName").value("ALB와 Auto Scaling 추가"))
+				.andExpect(jsonPath("$.tradeOffReferences[0].effects.performance").value(3));
 	}
 
 	@Test
@@ -215,6 +277,32 @@ class UserArchitectureControllerTests {
 				.andExpect(status().isCreated())
 				.andExpect(header().string(HttpHeaders.LOCATION, notNullValue()))
 				.andExpect(jsonPath("$.architectureId", notNullValue()))
+				.andReturn()
+				.getResponse()
+				.getHeader(HttpHeaders.LOCATION);
+
+		return location.substring(location.lastIndexOf('/') + 1);
+	}
+
+	private String createAlbArchitecture() throws Exception {
+		String location = mockMvc.perform(post("/api/user-architectures")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "title":"ALB 추가 아키텍처",
+								  "description":"트래픽 분산 진입점을 추가합니다.",
+								  "nodes":[
+								    {"id":"alb-1","resourceType":"ALB","displayName":"ALB"},
+								    {"id":"ec2-1","resourceType":"EC2","displayName":"API 서버"},
+								    {"id":"rds-1","resourceType":"RDS","displayName":"주 데이터베이스"}
+								  ],
+								  "connections":[
+								    {"id":"conn-1","sourceNodeId":"alb-1","targetNodeId":"ec2-1","connectionType":"REQUEST_FLOW"},
+								    {"id":"conn-2","sourceNodeId":"ec2-1","targetNodeId":"rds-1","connectionType":"REQUEST_FLOW"}
+								  ]
+								}
+								"""))
+				.andExpect(status().isCreated())
 				.andReturn()
 				.getResponse()
 				.getHeader(HttpHeaders.LOCATION);
