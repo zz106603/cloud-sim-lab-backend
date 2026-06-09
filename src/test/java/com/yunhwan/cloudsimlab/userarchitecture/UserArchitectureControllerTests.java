@@ -2,6 +2,7 @@ package com.yunhwan.cloudsimlab.userarchitecture;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -69,6 +70,47 @@ class UserArchitectureControllerTests {
 				.andExpect(jsonPath("$.connections[0].id").value("conn-1"))
 				.andExpect(jsonPath("$.connections[0].sourceNodeId").value("ec2-1"))
 				.andExpect(jsonPath("$.connections[0].targetNodeId").value("rds-1"));
+	}
+
+	@Test
+	void 저장_전_아키텍처를_검증하고_오류_경고_학습_안내를_반환한다() throws Exception {
+		mockMvc.perform(post("/api/user-architectures/validate")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "nodes":[
+								    {"id":"client-1","resourceType":"CLIENT","displayName":"Client"},
+								    {"id":"ec2-1","resourceType":"EC2","displayName":"API 서버"},
+								    {"id":"legacy-1","resourceType":"LEGACY_DB","displayName":"지원하지 않는 DB"}
+								  ],
+								  "connections":[
+								    {"id":"conn-1","sourceNodeId":"client-1","targetNodeId":"ec2-1","connectionType":"REQUEST_FLOW"},
+								    {"id":"conn-2","sourceNodeId":"ec2-1","targetNodeId":"missing","connectionType":"REQUEST_FLOW"}
+								  ]
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.valid").value(false))
+				.andExpect(jsonPath("$.errors", hasSize(2)))
+				.andExpect(jsonPath("$.errors[*].severity", hasItems("ERROR")))
+				.andExpect(jsonPath("$.errors[*].code", hasItems("UNSUPPORTED_RESOURCE_TYPE", "MISSING_CONNECTION_TARGET")))
+				.andExpect(jsonPath("$.errors[0].targetType").value("NODE"))
+				.andExpect(jsonPath("$.errors[0].targetId").value("legacy-1"))
+				.andExpect(jsonPath("$.errors[0].reason", containsString("카탈로그")))
+				.andExpect(jsonPath("$.warnings", hasSize(0)))
+				.andExpect(jsonPath("$.guidance[0].code").value("FIX_STRUCTURE_FIRST"));
+	}
+
+	@Test
+	void 저장된_아키텍처를_ID로_검증할_수_있다() throws Exception {
+		String architectureId = createArchitecture();
+
+		mockMvc.perform(get("/api/user-architectures/{architectureId}/validation", architectureId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.valid").value(true))
+				.andExpect(jsonPath("$.errors", hasSize(0)))
+				.andExpect(jsonPath("$.warnings", hasSize(0)))
+				.andExpect(jsonPath("$.guidance[*].code", hasItems("SECURITY_BOUNDARY_REVIEW")));
 	}
 
 	@Test
