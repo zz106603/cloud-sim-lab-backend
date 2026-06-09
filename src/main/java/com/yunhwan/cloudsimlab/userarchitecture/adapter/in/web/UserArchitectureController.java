@@ -1,7 +1,9 @@
 package com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web;
 
+import java.time.Duration;
 import java.util.List;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,8 +38,10 @@ public class UserArchitectureController {
 	}
 
 	@GetMapping("/catalog")
-	public CatalogResponse catalog() {
-		return CatalogResponse.fromSupportedTypes();
+	public ResponseEntity<CatalogResponse> catalog() {
+		return ResponseEntity.ok()
+				.cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
+				.body(CatalogResponse.supportedTypes());
 	}
 
 	@GetMapping

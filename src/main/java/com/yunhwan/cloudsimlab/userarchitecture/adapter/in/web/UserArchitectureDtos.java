@@ -97,8 +97,7 @@ final class UserArchitectureDtos {
 			List<ResourceTypeResponse> resourceTypes,
 			List<ConnectionTypeResponse> connectionTypes
 	) {
-		static CatalogResponse fromSupportedTypes() {
-			return new CatalogResponse(
+		private static final CatalogResponse SUPPORTED_TYPES = new CatalogResponse(
 					Arrays.stream(UserArchitectureResourceType.values())
 							.map(ResourceTypeResponse::from)
 							.toList(),
@@ -106,6 +105,9 @@ final class UserArchitectureDtos {
 							.map(ConnectionTypeResponse::from)
 							.toList()
 			);
+
+		static CatalogResponse supportedTypes() {
+			return SUPPORTED_TYPES;
 		}
 	}
 
