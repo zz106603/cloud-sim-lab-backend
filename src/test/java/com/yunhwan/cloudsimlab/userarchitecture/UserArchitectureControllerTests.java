@@ -1,5 +1,6 @@
 package com.yunhwan.cloudsimlab.userarchitecture;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -31,6 +32,8 @@ class UserArchitectureControllerTests {
 	void 빌더용_리소스와_연결_카탈로그를_조회할_수_있다() throws Exception {
 		mockMvc.perform(get("/api/user-architectures/catalog"))
 				.andExpect(status().isOk())
+				.andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("max-age=3600")))
+				.andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("public")))
 				.andExpect(jsonPath("$.resourceTypes", hasSize(17)))
 				.andExpect(jsonPath("$.resourceTypes[0].key").value("CLIENT"))
 				.andExpect(jsonPath("$.resourceTypes[0].displayName").value("Client"))
