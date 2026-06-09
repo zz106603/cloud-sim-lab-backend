@@ -19,8 +19,11 @@ import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureD
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.DetailResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.SaveRequest;
 import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.SummaryResponse;
+import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.ValidationRequest;
+import com.yunhwan.cloudsimlab.userarchitecture.adapter.in.web.UserArchitectureDtos.ValidationResponse;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.GetUserArchitectureUseCase;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase;
+import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase;
 
 @RestController
 @RequestMapping("/api/user-architectures")
@@ -28,13 +31,16 @@ public class UserArchitectureController {
 
 	private final GetUserArchitectureUseCase getUserArchitectureUseCase;
 	private final ManageUserArchitectureUseCase manageUserArchitectureUseCase;
+	private final ValidateUserArchitectureUseCase validateUserArchitectureUseCase;
 
 	public UserArchitectureController(
 			GetUserArchitectureUseCase getUserArchitectureUseCase,
-			ManageUserArchitectureUseCase manageUserArchitectureUseCase
+			ManageUserArchitectureUseCase manageUserArchitectureUseCase,
+			ValidateUserArchitectureUseCase validateUserArchitectureUseCase
 	) {
 		this.getUserArchitectureUseCase = getUserArchitectureUseCase;
 		this.manageUserArchitectureUseCase = manageUserArchitectureUseCase;
+		this.validateUserArchitectureUseCase = validateUserArchitectureUseCase;
 	}
 
 	@GetMapping("/catalog")
@@ -52,9 +58,21 @@ public class UserArchitectureController {
 				.toList();
 	}
 
+	@PostMapping("/validate")
+	public ValidationResponse validate(@RequestBody ValidationRequest request) {
+		return ValidationResponse.from(validateUserArchitectureUseCase.validate(
+				request == null ? null : request.toCommand()
+		));
+	}
+
 	@GetMapping("/{architectureId}")
 	public DetailResponse findOne(@PathVariable String architectureId) {
 		return DetailResponse.from(getUserArchitectureUseCase.findOne(architectureId));
+	}
+
+	@GetMapping("/{architectureId}/validation")
+	public ValidationResponse validateSaved(@PathVariable String architectureId) {
+		return ValidationResponse.from(validateUserArchitectureUseCase.validateSaved(architectureId));
 	}
 
 	@PostMapping

@@ -8,11 +8,16 @@ import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserAr
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.CreateUserArchitectureCommand;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.NodeCommand;
 import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ManageUserArchitectureUseCase.UpdateUserArchitectureCommand;
+import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase;
+import com.yunhwan.cloudsimlab.userarchitecture.application.port.in.ValidateUserArchitectureUseCase.ValidateUserArchitectureCommand;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitecture;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureConnection;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureConnectionType;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureNode;
 import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureResourceType;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidationIssue;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidationResult;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureValidationSeverity;
 
 final class UserArchitectureDtos {
 
@@ -143,6 +148,90 @@ final class UserArchitectureDtos {
 		}
 	}
 
+	record ValidationResponse(
+			boolean valid,
+			List<ValidationIssueResponse> errors,
+			List<ValidationIssueResponse> warnings,
+			List<ValidationIssueResponse> guidance
+	) {
+		static ValidationResponse from(UserArchitectureValidationResult result) {
+			return new ValidationResponse(
+					result.valid(),
+					result.errors().stream()
+							.map(ValidationIssueResponse::from)
+							.toList(),
+					result.warnings().stream()
+							.map(ValidationIssueResponse::from)
+							.toList(),
+					result.guidance().stream()
+							.map(ValidationIssueResponse::from)
+							.toList()
+			);
+		}
+	}
+
+	record ValidationIssueResponse(
+			UserArchitectureValidationSeverity severity,
+			String code,
+			String targetType,
+			String targetId,
+			String message,
+			String reason
+	) {
+		static ValidationIssueResponse from(UserArchitectureValidationIssue issue) {
+			return new ValidationIssueResponse(
+					issue.severity(),
+					issue.code(),
+					issue.targetType(),
+					issue.targetId(),
+					issue.message(),
+					issue.reason()
+			);
+		}
+	}
+
+	record ValidationRequest(
+			List<ValidationNodeRequest> nodes,
+			List<ValidationConnectionRequest> connections
+	) {
+		ValidateUserArchitectureCommand toCommand() {
+			return new ValidateUserArchitectureCommand(
+					toValidationNodeCommands(nodes),
+					toValidationConnectionCommands(connections)
+			);
+		}
+	}
+
+	record ValidationNodeRequest(
+			String id,
+			String resourceType,
+			String displayName
+	) {
+		ValidateUserArchitectureUseCase.NodeCommand toCommand() {
+			return new ValidateUserArchitectureUseCase.NodeCommand(
+					id,
+					resourceType,
+					displayName
+			);
+		}
+	}
+
+	record ValidationConnectionRequest(
+			String id,
+			String sourceNodeId,
+			String targetNodeId,
+			String connectionType
+	) {
+		ValidateUserArchitectureUseCase.ConnectionCommand toCommand() {
+			return new ValidateUserArchitectureUseCase.ConnectionCommand(
+					id,
+					sourceNodeId,
+					targetNodeId,
+					connectionType
+			);
+		}
+	}
+
 	record SaveRequest(
 			String title,
 			String description,
@@ -189,6 +278,28 @@ final class UserArchitectureDtos {
 	}
 
 	private static List<ConnectionCommand> toConnectionCommands(List<ConnectionRequest> requests) {
+		if (requests == null) {
+			return List.of();
+		}
+		return requests.stream()
+				.map(request -> request == null ? null : request.toCommand())
+				.toList();
+	}
+
+	private static List<ValidateUserArchitectureUseCase.NodeCommand> toValidationNodeCommands(
+			List<ValidationNodeRequest> requests
+	) {
+		if (requests == null) {
+			return List.of();
+		}
+		return requests.stream()
+				.map(request -> request == null ? null : request.toCommand())
+				.toList();
+	}
+
+	private static List<ValidateUserArchitectureUseCase.ConnectionCommand> toValidationConnectionCommands(
+			List<ValidationConnectionRequest> requests
+	) {
 		if (requests == null) {
 			return List.of();
 		}
