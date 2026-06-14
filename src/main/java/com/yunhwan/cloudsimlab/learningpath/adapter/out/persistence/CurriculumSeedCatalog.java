@@ -131,6 +131,9 @@ public final class CurriculumSeedCatalog {
 	}
 
 	public static List<String> moduleIdsForDocument(String documentKey) {
+		if (documentKey == null) {
+			return List.of();
+		}
 		return MODULES.stream()
 				.filter(module -> module.documentIds().contains(documentKey))
 				.sorted(Comparator.comparingInt(LearningModule::orderIndex))
@@ -139,6 +142,9 @@ public final class CurriculumSeedCatalog {
 	}
 
 	public static List<String> moduleIdsForScenario(String scenarioGraphKey) {
+		if (scenarioGraphKey == null) {
+			return List.of();
+		}
 		return MODULES.stream()
 				.filter(module -> module.relatedScenarioIds().contains(scenarioGraphKey))
 				.sorted(Comparator.comparingInt(LearningModule::orderIndex))

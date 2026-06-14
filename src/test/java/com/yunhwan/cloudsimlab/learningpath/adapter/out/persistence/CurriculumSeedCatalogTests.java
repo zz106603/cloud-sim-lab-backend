@@ -36,4 +36,10 @@ class CurriculumSeedCatalogTests {
 		assertThat(CurriculumSeedCatalog.moduleIdsForScenario("security-group-misconfiguration"))
 				.containsExactly("network-boundary", "user-architecture-practice");
 	}
+
+	@Test
+	void null_문서와_시나리오_키는_빈_모듈_ID_목록을_반환한다() {
+		assertThat(CurriculumSeedCatalog.moduleIdsForDocument(null)).isEmpty();
+		assertThat(CurriculumSeedCatalog.moduleIdsForScenario(null)).isEmpty();
+	}
 }
