@@ -38,14 +38,18 @@ public class ScenarioController {
 	) {
 		return getScenarioUseCase.findAll(category, level)
 				.stream()
-				.map(SummaryResponse::from)
+				.map(scenario -> SummaryResponse.from(scenario, getScenarioUseCase.findRelatedModuleIds(scenario)))
 				.toList();
 	}
 
 	@GetMapping("/{scenarioId}")
 	public DetailResponse findOne(@PathVariable Long scenarioId) {
 		var scenario = getScenarioUseCase.findOne(scenarioId);
-		return DetailResponse.from(scenario, getScenarioUseCase.findRelatedLearningDocuments(scenario));
+		return DetailResponse.from(
+				scenario,
+				getScenarioUseCase.findRelatedModuleIds(scenario),
+				getScenarioUseCase.findRelatedLearningDocuments(scenario)
+		);
 	}
 
 	@PostMapping("/{scenarioId}/simulate")
