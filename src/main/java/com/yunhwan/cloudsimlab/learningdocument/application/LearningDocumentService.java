@@ -12,6 +12,7 @@ import com.yunhwan.cloudsimlab.learningdocument.application.port.in.GetLearningD
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentQueryPort;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
 import com.yunhwan.cloudsimlab.learningdocument.domain.RelatedScenario;
+import com.yunhwan.cloudsimlab.learningpath.adapter.out.persistence.CurriculumSeedCatalog;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelations;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
@@ -64,5 +65,13 @@ public class LearningDocumentService implements GetLearningDocumentUseCase {
 						relation.learningReason()
 				))
 				.toList();
+	}
+
+	@Override
+	public List<String> findRelatedModuleIds(LearningDocument document) {
+		if (document == null || document.getDocumentKey() == null) {
+			return List.of();
+		}
+		return CurriculumSeedCatalog.moduleIdsForDocument(document.getDocumentKey());
 	}
 }

@@ -26,7 +26,7 @@ public class LearningDocumentController {
 	public List<SummaryResponse> findAll() {
 		return getLearningDocumentUseCase.findAll()
 				.stream()
-				.map(SummaryResponse::from)
+				.map(document -> SummaryResponse.from(document, getLearningDocumentUseCase.findRelatedModuleIds(document)))
 				.toList();
 	}
 
@@ -35,6 +35,7 @@ public class LearningDocumentController {
 		LearningDocument document = getLearningDocumentUseCase.findOne(documentId);
 		return DetailResponse.from(
 				document,
+				getLearningDocumentUseCase.findRelatedModuleIds(document),
 				getLearningDocumentUseCase.findRelatedScenarios(document)
 		);
 	}

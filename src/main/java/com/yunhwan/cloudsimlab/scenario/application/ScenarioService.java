@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumentQueryPort;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
+import com.yunhwan.cloudsimlab.learningpath.adapter.out.persistence.CurriculumSeedCatalog;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelations;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioQueryPort;
@@ -74,6 +75,14 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 	@Override
 	public List<RelatedLearningDocument> findRelatedLearningDocuments(Scenario scenario) {
 		return relatedLearningDocumentsFor(scenario, null);
+	}
+
+	@Override
+	public List<String> findRelatedModuleIds(Scenario scenario) {
+		if (scenario == null || scenario.getGraphKey() == null) {
+			return List.of();
+		}
+		return CurriculumSeedCatalog.moduleIdsForScenario(scenario.getGraphKey());
 	}
 
 	@Override

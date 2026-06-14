@@ -28,14 +28,22 @@ final class ScenarioDtos {
 	private ScenarioDtos() {
 	}
 
-	record SummaryResponse(Long id, String title, ScenarioCategory category, ScenarioLevel level, String summary) {
-		static SummaryResponse from(Scenario scenario) {
+	record SummaryResponse(
+			Long id,
+			String title,
+			ScenarioCategory category,
+			ScenarioLevel level,
+			String summary,
+			List<String> relatedModuleIds
+	) {
+		static SummaryResponse from(Scenario scenario, List<String> relatedModuleIds) {
 			return new SummaryResponse(
 					scenario.getId(),
 					scenario.getTitle(),
 					scenario.getCategory(),
 					scenario.getLevel(),
-					scenario.getSummary()
+					scenario.getSummary(),
+					relatedModuleIds
 			);
 		}
 	}
@@ -51,10 +59,15 @@ final class ScenarioDtos {
 			List<String> initialArchitecture,
 			ArchitectureGraphResponse initialArchitectureGraph,
 			FailureImpactResponse initialFailureImpact,
+			List<String> relatedModuleIds,
 			List<OptionResponse> options,
 			List<RelatedLearningDocumentResponse> relatedLearningDocuments
 	) {
-		static DetailResponse from(Scenario scenario, List<RelatedLearningDocument> relatedLearningDocuments) {
+		static DetailResponse from(
+				Scenario scenario,
+				List<String> relatedModuleIds,
+				List<RelatedLearningDocument> relatedLearningDocuments
+		) {
 			String problem = scenario.getDescription();
 			List<RelatedLearningDocument> documents = relatedLearningDocuments == null ? List.of() : relatedLearningDocuments;
 			return new DetailResponse(
@@ -68,6 +81,7 @@ final class ScenarioDtos {
 					scenario.getInitialArchitecture(),
 					ArchitectureGraphResponse.from(ArchitectureGraphs.initialFor(scenario)),
 					FailureImpactResponse.from(FailureImpactFlows.initialFor(scenario)),
+					relatedModuleIds,
 					scenario.getOptions().stream()
 							.map(OptionResponse::from)
 							.toList(),

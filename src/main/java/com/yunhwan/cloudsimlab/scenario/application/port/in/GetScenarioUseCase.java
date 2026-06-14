@@ -14,4 +14,6 @@ public interface GetScenarioUseCase {
 	Scenario findOne(Long scenarioId);
 
 	List<RelatedLearningDocument> findRelatedLearningDocuments(Scenario scenario);
+
+	List<String> findRelatedModuleIds(Scenario scenario);
 }

@@ -15,14 +15,22 @@ final class LearningDocumentDtos {
 	private LearningDocumentDtos() {
 	}
 
-	record SummaryResponse(Long id, String title, DocumentCategory category, DocumentLevel level, String summary) {
-		static SummaryResponse from(LearningDocument document) {
+	record SummaryResponse(
+			Long id,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			List<String> relatedModuleIds
+	) {
+		static SummaryResponse from(LearningDocument document, List<String> relatedModuleIds) {
 			return new SummaryResponse(
 					document.getId(),
 					document.getTitle(),
 					document.getCategory(),
 					document.getLevel(),
-					document.getSummary()
+					document.getSummary(),
+					relatedModuleIds
 			);
 		}
 	}
@@ -34,9 +42,14 @@ final class LearningDocumentDtos {
 			DocumentLevel level,
 			String summary,
 			String content,
+			List<String> relatedModuleIds,
 			List<RelatedScenarioResponse> relatedScenarios
 	) {
-		static DetailResponse from(LearningDocument document, List<RelatedScenario> relatedScenarios) {
+		static DetailResponse from(
+				LearningDocument document,
+				List<String> relatedModuleIds,
+				List<RelatedScenario> relatedScenarios
+		) {
 			return new DetailResponse(
 					document.getId(),
 					document.getTitle(),
@@ -44,6 +57,7 @@ final class LearningDocumentDtos {
 					document.getLevel(),
 					document.getSummary(),
 					document.getContent(),
+					relatedModuleIds,
 					relatedScenarios.stream()
 							.map(RelatedScenarioResponse::from)
 							.toList()
