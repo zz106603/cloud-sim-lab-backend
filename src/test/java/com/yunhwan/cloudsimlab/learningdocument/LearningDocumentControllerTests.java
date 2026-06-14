@@ -76,6 +76,8 @@ class LearningDocumentControllerTests {
 				.andExpect(jsonPath("$[0].category").value("COMPUTE"))
 				.andExpect(jsonPath("$[0].level").value("BEGINNER"))
 				.andExpect(jsonPath("$[0].summary").value("Understand compute capacity."))
+				.andExpect(jsonPath("$[0].relatedModuleIds", hasSize(1)))
+				.andExpect(jsonPath("$[0].relatedModuleIds[0]").value("single-server-deployment"))
 				.andExpect(jsonPath("$[0].content").doesNotExist());
 	}
 
@@ -86,6 +88,8 @@ class LearningDocumentControllerTests {
 				.andExpect(jsonPath("$.id").value(document.getId()))
 				.andExpect(jsonPath("$.title").value("Virtual machines and compute capacity"))
 				.andExpect(jsonPath("$.content").value("Virtual machines run application workloads on configurable CPU and memory resources."))
+				.andExpect(jsonPath("$.relatedModuleIds", hasSize(1)))
+				.andExpect(jsonPath("$.relatedModuleIds[0]").value("single-server-deployment"))
 				.andExpect(jsonPath("$.relatedScenarios", hasSize(1)))
 				.andExpect(jsonPath("$.relatedScenarios[0].id").value(scenario.getId()))
 				.andExpect(jsonPath("$.relatedScenarios[0].title").value("Scale a web service"))
