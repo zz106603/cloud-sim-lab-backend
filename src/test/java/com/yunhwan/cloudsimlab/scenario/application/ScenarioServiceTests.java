@@ -69,6 +69,13 @@ class ScenarioServiceTests {
 				.isInstanceOf(IllegalStateException.class);
 	}
 
+	@Test
+	void 관련_모듈_ID는_시나리오_graphKey를_기준으로_반환한다() {
+		List<String> result = service.findRelatedModuleIds(scenario("single-spring-boot"));
+
+		assertThat(result).containsExactly("single-server-deployment");
+	}
+
 	private LearningDocument document(String documentKey) {
 		return LearningDocument.newDocumentWithKey(
 				documentKey,

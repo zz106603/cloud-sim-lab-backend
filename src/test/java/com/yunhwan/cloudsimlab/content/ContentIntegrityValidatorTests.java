@@ -8,6 +8,9 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog;
+import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
+import com.yunhwan.cloudsimlab.learningpath.adapter.out.persistence.CurriculumSeedCatalog;
+import com.yunhwan.cloudsimlab.learningpath.domain.LearningPath;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelations;
 import com.yunhwan.cloudsimlab.scenario.adapter.out.persistence.ScenarioSeedCatalog;
@@ -26,8 +29,88 @@ class ContentIntegrityValidatorTests {
 		validator.validate(
 				ScenarioSeedCatalog.scenarios(),
 				LearningDocumentSeedCatalog.documentKeys(),
-				LearningRelations.all()
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules()
 		);
+	}
+
+	@Test
+	void 학습_경로와_모듈_참조가_깨지면_콘텐츠_ID를_포함해_진단한다() {
+		LearningPath brokenPath = new LearningPath(
+				"broken-path",
+				"깨진 경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				false,
+				1,
+				List.of("missing-module", "missing-module")
+		);
+		LearningModule brokenModule = new LearningModule(
+				"broken-module",
+				"unknown-path",
+				"깨진 모듈",
+				"설명",
+				List.of("목표"),
+				List.of(),
+				1,
+				List.of("unknown-document"),
+				List.of("unknown-scenario"),
+				List.of()
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(brokenPath),
+				List.of(brokenModule)
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningPaths must include at least one recommended path")
+				.hasMessageContaining("learningPath[broken-path|깨진 경로] references unknown moduleId: missing-module")
+				.hasMessageContaining("learningPath[broken-path|깨진 경로] moduleIds has duplicated moduleId: missing-module")
+				.hasMessageContaining("learningModule[broken-module|깨진 모듈] references unknown pathId: unknown-path")
+				.hasMessageContaining("learningModule[broken-module|깨진 모듈] references unknown documentId: unknown-document")
+				.hasMessageContaining("learningModule[broken-module|깨진 모듈] references unknown relatedScenarioId: unknown-scenario");
+	}
+
+	@Test
+	void 학습_모듈은_학습목표와_문서_또는_시나리오_참조가_필요하다() {
+		LearningPath path = new LearningPath(
+				"path",
+				"경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				List.of("empty-module")
+		);
+		LearningModule module = new LearningModule(
+				"empty-module",
+				"path",
+				"빈 모듈",
+				"설명",
+				List.of(),
+				List.of(),
+				1,
+				List.of(),
+				List.of(),
+				List.of()
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path),
+				List.of(module)
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningModule[empty-module|빈 모듈] learningGoals must not be empty")
+				.hasMessageContaining("learningModule[empty-module|빈 모듈] must reference at least one document or scenario");
 	}
 
 	@Test

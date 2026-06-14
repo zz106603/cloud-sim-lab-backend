@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.yunhwan.cloudsimlab.learningdocument.application.LearningDocumentNotFoundException;
+import com.yunhwan.cloudsimlab.learningmodule.application.LearningModuleNotFoundException;
+import com.yunhwan.cloudsimlab.learningpath.application.LearningPathNotFoundException;
 import com.yunhwan.cloudsimlab.scenario.application.InvalidSimulationRequestException;
 import com.yunhwan.cloudsimlab.scenario.application.ScenarioNotFoundException;
 import com.yunhwan.cloudsimlab.userarchitecture.application.InvalidUserArchitectureRequestException;
@@ -20,6 +22,18 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(LearningDocumentNotFoundException.class)
 	ErrorResponse handleLearningDocumentNotFound(LearningDocumentNotFoundException ex) {
 		return new ErrorResponse("LEARNING_DOCUMENT_NOT_FOUND", ex.getMessage());
+	}
+
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	@ExceptionHandler(LearningPathNotFoundException.class)
+	ErrorResponse handleLearningPathNotFound(LearningPathNotFoundException ex) {
+		return new ErrorResponse("LEARNING_PATH_NOT_FOUND", ex.getMessage());
+	}
+
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	@ExceptionHandler(LearningModuleNotFoundException.class)
+	ErrorResponse handleLearningModuleNotFound(LearningModuleNotFoundException ex) {
+		return new ErrorResponse("LEARNING_MODULE_NOT_FOUND", ex.getMessage());
 	}
 
 	@ResponseStatus(HttpStatus.NOT_FOUND)

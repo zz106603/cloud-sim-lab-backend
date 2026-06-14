@@ -60,6 +60,13 @@ class LearningDocumentServiceTests {
 				.isInstanceOf(IllegalStateException.class);
 	}
 
+	@Test
+	void 관련_모듈_ID는_문서_key를_기준으로_반환한다() {
+		List<String> result = service.findRelatedModuleIds(document("ec2-compute-capacity"));
+
+		assertThat(result).containsExactly("single-server-deployment");
+	}
+
 	private LearningDocument document(String documentKey) {
 		return LearningDocument.newDocumentWithKey(
 				documentKey,

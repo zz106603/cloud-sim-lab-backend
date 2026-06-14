@@ -102,6 +102,8 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$[0].category").value("COMPUTE"))
 				.andExpect(jsonPath("$[0].level").value("BEGINNER"))
 				.andExpect(jsonPath("$[0].summary").value("컴퓨팅 용량을 선택합니다."))
+				.andExpect(jsonPath("$[0].relatedModuleIds", hasSize(1)))
+				.andExpect(jsonPath("$[0].relatedModuleIds[0]").value("single-server-deployment"))
 				.andExpect(jsonPath("$[0].description").doesNotExist())
 				.andExpect(jsonPath("$[0].options").doesNotExist());
 	}
@@ -134,6 +136,8 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.initialArchitectureGraph.edges", hasSize(2)))
 				.andExpect(jsonPath("$.initialArchitectureGraph.edges[0].source").value("client"))
 				.andExpect(jsonPath("$.initialArchitectureGraph.edges[0].target").value("ec2"))
+				.andExpect(jsonPath("$.relatedModuleIds", hasSize(1)))
+				.andExpect(jsonPath("$.relatedModuleIds[0]").value("single-server-deployment"))
 				.andExpect(jsonPath("$.options", hasSize(2)))
 				.andExpect(jsonPath("$.options[0].name").value("작은 EC2 인스턴스 유지"))
 				.andExpect(jsonPath("$.options[0].description").value("비용은 낮지만 용량이 제한적입니다."))
