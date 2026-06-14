@@ -1,10 +1,14 @@
 package com.yunhwan.cloudsimlab.content;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
+import com.yunhwan.cloudsimlab.learningpath.domain.LearningPath;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureEdge;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureGraph;
@@ -24,13 +28,26 @@ public class ContentIntegrityValidator {
 	private static final int MAX_EFFECT = 3;
 
 	public void validate(List<Scenario> scenarios, Set<String> documentKeys, List<LearningRelation> relations) {
+		validate(scenarios, documentKeys, relations, List.of(), List.of());
+	}
+
+	public void validate(
+			List<Scenario> scenarios,
+			Set<String> documentKeys,
+			List<LearningRelation> relations,
+			List<LearningPath> paths,
+			List<LearningModule> modules
+	) {
 		List<String> errors = new ArrayList<>();
 		List<Scenario> targetScenarios = scenarios == null ? List.of() : scenarios;
 		Set<String> targetDocumentKeys = documentKeys == null ? Set.of() : documentKeys;
 		List<LearningRelation> targetRelations = relations == null ? List.of() : relations;
+		List<LearningPath> targetPaths = paths == null ? List.of() : paths;
+		List<LearningModule> targetModules = modules == null ? List.of() : modules;
 		Set<String> scenarioKeys = validateScenarios(targetScenarios, errors);
 
 		validateRelations(targetRelations, scenarioKeys, targetDocumentKeys, errors);
+		validateCurriculum(targetPaths, targetModules, targetDocumentKeys, scenarioKeys, errors);
 
 		if (!errors.isEmpty()) {
 			throw new ContentIntegrityException("Content integrity validation failed:\n- " + String.join("\n- ", errors));
@@ -345,6 +362,202 @@ public class ContentIntegrityValidator {
 		}
 	}
 
+	private void validateCurriculum(
+			List<LearningPath> paths,
+			List<LearningModule> modules,
+			Set<String> documentKeys,
+			Set<String> scenarioKeys,
+			List<String> errors
+	) {
+		if (paths.isEmpty() && modules.isEmpty()) {
+			return;
+		}
+
+		Set<String> pathIds = validateLearningPaths(paths, errors);
+		Set<String> moduleIds = validateLearningModules(modules, pathIds, documentKeys, scenarioKeys, errors);
+		validateLearningPathModuleReferences(paths, moduleIds, errors);
+		validateCurriculumReverseRelations(modules, errors);
+	}
+
+	private Set<String> validateLearningPaths(List<LearningPath> paths, List<String> errors) {
+		Set<String> pathIds = new HashSet<>();
+		Set<Integer> orderIndexes = new HashSet<>();
+		boolean hasRecommendedPath = false;
+
+		for (LearningPath path : paths) {
+			if (path == null) {
+				errors.add("learningPath[null] must not be null");
+				continue;
+			}
+			String pathLabel = pathLabel(path);
+			validateText(path.id(), pathLabel, "id", errors);
+			validateTrimmed(path.id(), pathLabel, "id", errors);
+			validateText(path.title(), pathLabel, "title", errors);
+			validateText(path.description(), pathLabel, "description", errors);
+			validateText(path.targetLevel(), pathLabel, "targetLevel", errors);
+			validateText(path.learningGoal(), pathLabel, "learningGoal", errors);
+			if (path.orderIndex() < 1) {
+				errors.add(pathLabel + " orderIndex must be greater than 0: " + path.orderIndex());
+			}
+			if (!orderIndexes.add(path.orderIndex())) {
+				errors.add(pathLabel + " orderIndex is duplicated: " + path.orderIndex());
+			}
+			if (hasText(path.id()) && !pathIds.add(path.id())) {
+				errors.add(pathLabel + " id is duplicated: " + path.id());
+			}
+			if (path.moduleIds().isEmpty()) {
+				errors.add(pathLabel + " moduleIds must not be empty");
+			}
+			hasRecommendedPath = hasRecommendedPath || path.recommended();
+		}
+
+		if (!hasRecommendedPath) {
+			errors.add("learningPaths must include at least one recommended path");
+		}
+		return pathIds;
+	}
+
+	private Set<String> validateLearningModules(
+			List<LearningModule> modules,
+			Set<String> pathIds,
+			Set<String> documentKeys,
+			Set<String> scenarioKeys,
+			List<String> errors
+	) {
+		Set<String> moduleIds = new HashSet<>();
+		Map<String, Set<Integer>> orderIndexesByPathId = new HashMap<>();
+
+		for (LearningModule module : modules) {
+			if (module == null) {
+				errors.add("learningModule[null] must not be null");
+				continue;
+			}
+			String moduleLabel = moduleLabel(module);
+			validateText(module.id(), moduleLabel, "id", errors);
+			validateTrimmed(module.id(), moduleLabel, "id", errors);
+			validateText(module.pathId(), moduleLabel, "pathId", errors);
+			validateTrimmed(module.pathId(), moduleLabel, "pathId", errors);
+			validateText(module.title(), moduleLabel, "title", errors);
+			validateText(module.description(), moduleLabel, "description", errors);
+			if (module.orderIndex() < 1) {
+				errors.add(moduleLabel + " orderIndex must be greater than 0: " + module.orderIndex());
+			}
+			if (hasText(module.pathId()) && !pathIds.contains(module.pathId())) {
+				errors.add(moduleLabel + " references unknown pathId: " + module.pathId());
+			}
+			if (hasText(module.id()) && !moduleIds.add(module.id())) {
+				errors.add(moduleLabel + " id is duplicated: " + module.id());
+			}
+			Set<Integer> pathOrderIndexes = orderIndexesByPathId.computeIfAbsent(module.pathId(), ignored -> new HashSet<>());
+			if (!pathOrderIndexes.add(module.orderIndex())) {
+				errors.add(moduleLabel + " orderIndex is duplicated in path: " + module.orderIndex());
+			}
+			validateStringList(module.learningGoals(), moduleLabel, "learningGoals", true, errors);
+			validateStringList(module.prerequisites(), moduleLabel, "prerequisites", false, errors);
+			validateStringList(module.documentIds(), moduleLabel, "documentIds", false, errors);
+			validateStringList(module.relatedScenarioIds(), moduleLabel, "relatedScenarioIds", false, errors);
+			validateStringList(module.relatedArchitecturePracticeIds(), moduleLabel, "relatedArchitecturePracticeIds", false, errors);
+			if (module.documentIds().isEmpty() && module.relatedScenarioIds().isEmpty()) {
+				errors.add(moduleLabel + " must reference at least one document or scenario");
+			}
+			validateDocumentReferences(module, documentKeys, errors);
+			validateScenarioReferences(module, scenarioKeys, errors);
+		}
+
+		return moduleIds;
+	}
+
+	private void validateLearningPathModuleReferences(List<LearningPath> paths, Set<String> moduleIds, List<String> errors) {
+		for (LearningPath path : paths) {
+			if (path == null) {
+				continue;
+			}
+			Set<String> pathModuleIds = new HashSet<>();
+			for (String moduleId : path.moduleIds()) {
+				validateText(moduleId, pathLabel(path), "moduleIds", errors);
+				if (hasText(moduleId) && !moduleIds.contains(moduleId)) {
+					errors.add(pathLabel(path) + " references unknown moduleId: " + moduleId);
+				}
+				if (hasText(moduleId) && !pathModuleIds.add(moduleId)) {
+					errors.add(pathLabel(path) + " moduleIds has duplicated moduleId: " + moduleId);
+				}
+			}
+		}
+	}
+
+	private void validateCurriculumReverseRelations(List<LearningModule> modules, List<String> errors) {
+		Map<String, Set<String>> documentModuleIds = new HashMap<>();
+		Map<String, Set<String>> scenarioModuleIds = new HashMap<>();
+		for (LearningModule module : modules) {
+			if (module == null) {
+				continue;
+			}
+			for (String documentId : module.documentIds()) {
+				documentModuleIds.computeIfAbsent(documentId, ignored -> new HashSet<>()).add(module.id());
+			}
+			for (String scenarioId : module.relatedScenarioIds()) {
+				scenarioModuleIds.computeIfAbsent(scenarioId, ignored -> new HashSet<>()).add(module.id());
+			}
+		}
+		for (LearningModule module : modules) {
+			if (module == null) {
+				continue;
+			}
+			for (String documentId : module.documentIds()) {
+				if (!documentModuleIds.getOrDefault(documentId, Set.of()).contains(module.id())) {
+					errors.add(moduleLabel(module) + " document reverse relation is inconsistent: " + documentId);
+				}
+			}
+			for (String scenarioId : module.relatedScenarioIds()) {
+				if (!scenarioModuleIds.getOrDefault(scenarioId, Set.of()).contains(module.id())) {
+					errors.add(moduleLabel(module) + " scenario reverse relation is inconsistent: " + scenarioId);
+				}
+			}
+		}
+	}
+
+	private void validateDocumentReferences(LearningModule module, Set<String> documentKeys, List<String> errors) {
+		String moduleLabel = moduleLabel(module);
+		for (String documentId : module.documentIds()) {
+			if (hasText(documentId) && !documentKeys.contains(documentId)) {
+				errors.add(moduleLabel + " references unknown documentId: " + documentId);
+			}
+		}
+	}
+
+	private void validateScenarioReferences(LearningModule module, Set<String> scenarioKeys, List<String> errors) {
+		String moduleLabel = moduleLabel(module);
+		for (String scenarioId : module.relatedScenarioIds()) {
+			if (hasText(scenarioId) && !scenarioKeys.contains(scenarioId)) {
+				errors.add(moduleLabel + " references unknown relatedScenarioId: " + scenarioId);
+			}
+		}
+	}
+
+	private void validateStringList(
+			List<String> values,
+			String label,
+			String fieldName,
+			boolean required,
+			List<String> errors
+	) {
+		if (values == null) {
+			errors.add(label + " " + fieldName + " must not be null");
+			return;
+		}
+		if (required && values.isEmpty()) {
+			errors.add(label + " " + fieldName + " must not be empty");
+		}
+		Set<String> uniqueValues = new HashSet<>();
+		for (String value : values) {
+			validateText(value, label, fieldName, errors);
+			validateTrimmed(value, label, fieldName, errors);
+			if (hasText(value) && !uniqueValues.add(value)) {
+				errors.add(label + " " + fieldName + " has duplicated value: " + value);
+			}
+		}
+	}
+
 	private void validateEffectValue(String optionLabel, String dimension, int value, List<String> errors) {
 		if (value < MIN_EFFECT || value > MAX_EFFECT) {
 			errors.add(optionLabel + " effects." + dimension + " must be between " + MIN_EFFECT + " and " + MAX_EFFECT + ": " + value);
@@ -385,5 +598,13 @@ public class ContentIntegrityValidator {
 			return "null";
 		}
 		return option.getGraphKey() == null ? option.getName() : option.getGraphKey();
+	}
+
+	private String pathLabel(LearningPath path) {
+		return "learningPath[" + path.id() + "|" + path.title() + "]";
+	}
+
+	private String moduleLabel(LearningModule module) {
+		return "learningModule[" + module.id() + "|" + module.title() + "]";
 	}
 }
