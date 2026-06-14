@@ -2,6 +2,7 @@ package com.yunhwan.cloudsimlab.content;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -33,6 +34,78 @@ class ContentIntegrityValidatorTests {
 				CurriculumSeedCatalog.paths(),
 				CurriculumSeedCatalog.modules()
 		);
+	}
+
+	@Test
+	void 학습_경로가_다른_경로의_모듈을_참조하면_진단한다() {
+		LearningPath path = new LearningPath(
+				"path-a",
+				"경로 A",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				List.of("module-a")
+		);
+		LearningPath otherPath = new LearningPath(
+				"path-b",
+				"경로 B",
+				"설명",
+				"BEGINNER",
+				"목표",
+				false,
+				2,
+				List.of("module-b")
+		);
+		LearningModule module = new LearningModule(
+				"module-a",
+				"path-b",
+				"다른 경로 모듈",
+				"설명",
+				List.of("목표"),
+				List.of(),
+				1,
+				List.of("ec2-compute-capacity"),
+				List.of(),
+				List.of()
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path, otherPath),
+				List.of(module)
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningPath[path-a|경로 A] references moduleId with mismatched pathId: module-a");
+	}
+
+	@Test
+	void 학습_경로의_moduleIds에_null_원소가_있어도_NPE가_아닌_검증_오류로_진단한다() {
+		List<String> moduleIds = new ArrayList<>();
+		moduleIds.add(null);
+		LearningPath path = new LearningPath(
+				"path",
+				"경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				moduleIds
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningPath[path|경로] moduleIds must not be blank");
 	}
 
 	@Test

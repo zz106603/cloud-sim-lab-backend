@@ -1,5 +1,7 @@
 package com.yunhwan.cloudsimlab.learningpath.domain;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -19,7 +21,7 @@ public record LearningPath(
 		description = requireText(description, "description");
 		targetLevel = requireText(targetLevel, "targetLevel");
 		learningGoal = requireText(learningGoal, "learningGoal");
-		moduleIds = List.copyOf(Objects.requireNonNull(moduleIds, "Learning path moduleIds must not be null"));
+		moduleIds = Collections.unmodifiableList(new ArrayList<>(Objects.requireNonNull(moduleIds, "Learning path moduleIds must not be null")));
 	}
 
 	private static String requireText(String value, String fieldName) {

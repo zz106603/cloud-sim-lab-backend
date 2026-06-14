@@ -374,9 +374,8 @@ public class ContentIntegrityValidator {
 		}
 
 		Set<String> pathIds = validateLearningPaths(paths, errors);
-		Set<String> moduleIds = validateLearningModules(modules, pathIds, documentKeys, scenarioKeys, errors);
-		validateLearningPathModuleReferences(paths, moduleIds, errors);
-		validateCurriculumReverseRelations(modules, errors);
+		validateLearningModules(modules, pathIds, documentKeys, scenarioKeys, errors);
+		validateLearningPathModuleReferences(paths, modules, errors);
 	}
 
 	private Set<String> validateLearningPaths(List<LearningPath> paths, List<String> errors) {
@@ -467,7 +466,13 @@ public class ContentIntegrityValidator {
 		return moduleIds;
 	}
 
-	private void validateLearningPathModuleReferences(List<LearningPath> paths, Set<String> moduleIds, List<String> errors) {
+	private void validateLearningPathModuleReferences(List<LearningPath> paths, List<LearningModule> modules, List<String> errors) {
+		Map<String, LearningModule> modulesById = new HashMap<>();
+		for (LearningModule module : modules) {
+			if (module != null && hasText(module.id())) {
+				modulesById.putIfAbsent(module.id(), module);
+			}
+		}
 		for (LearningPath path : paths) {
 			if (path == null) {
 				continue;
@@ -475,42 +480,18 @@ public class ContentIntegrityValidator {
 			Set<String> pathModuleIds = new HashSet<>();
 			for (String moduleId : path.moduleIds()) {
 				validateText(moduleId, pathLabel(path), "moduleIds", errors);
-				if (hasText(moduleId) && !moduleIds.contains(moduleId)) {
+				if (!hasText(moduleId)) {
+					continue;
+				}
+				LearningModule module = modulesById.get(moduleId);
+				if (module == null) {
 					errors.add(pathLabel(path) + " references unknown moduleId: " + moduleId);
 				}
-				if (hasText(moduleId) && !pathModuleIds.add(moduleId)) {
+				else if (!path.id().equals(module.pathId())) {
+					errors.add(pathLabel(path) + " references moduleId with mismatched pathId: " + moduleId);
+				}
+				if (!pathModuleIds.add(moduleId)) {
 					errors.add(pathLabel(path) + " moduleIds has duplicated moduleId: " + moduleId);
-				}
-			}
-		}
-	}
-
-	private void validateCurriculumReverseRelations(List<LearningModule> modules, List<String> errors) {
-		Map<String, Set<String>> documentModuleIds = new HashMap<>();
-		Map<String, Set<String>> scenarioModuleIds = new HashMap<>();
-		for (LearningModule module : modules) {
-			if (module == null) {
-				continue;
-			}
-			for (String documentId : module.documentIds()) {
-				documentModuleIds.computeIfAbsent(documentId, ignored -> new HashSet<>()).add(module.id());
-			}
-			for (String scenarioId : module.relatedScenarioIds()) {
-				scenarioModuleIds.computeIfAbsent(scenarioId, ignored -> new HashSet<>()).add(module.id());
-			}
-		}
-		for (LearningModule module : modules) {
-			if (module == null) {
-				continue;
-			}
-			for (String documentId : module.documentIds()) {
-				if (!documentModuleIds.getOrDefault(documentId, Set.of()).contains(module.id())) {
-					errors.add(moduleLabel(module) + " document reverse relation is inconsistent: " + documentId);
-				}
-			}
-			for (String scenarioId : module.relatedScenarioIds()) {
-				if (!scenarioModuleIds.getOrDefault(scenarioId, Set.of()).contains(module.id())) {
-					errors.add(moduleLabel(module) + " scenario reverse relation is inconsistent: " + scenarioId);
 				}
 			}
 		}
