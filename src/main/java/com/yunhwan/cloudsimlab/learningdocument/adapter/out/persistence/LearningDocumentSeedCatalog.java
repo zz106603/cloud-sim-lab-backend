@@ -172,7 +172,6 @@ public final class LearningDocumentSeedCatalog {
 			List<String> relatedScenarioIds
 	) {
 		public SeedDocument {
-			documentKey = requireText(documentKey, "documentKey");
 			title = requireText(title, "title");
 			category = Objects.requireNonNull(category, "Learning document seed category must not be null");
 			level = Objects.requireNonNull(level, "Learning document seed level must not be null");
