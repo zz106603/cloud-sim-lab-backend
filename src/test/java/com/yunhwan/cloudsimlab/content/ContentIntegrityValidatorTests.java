@@ -8,7 +8,10 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog.SeedDocument;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
 import com.yunhwan.cloudsimlab.learningpath.adapter.out.persistence.CurriculumSeedCatalog;
 import com.yunhwan.cloudsimlab.learningpath.domain.LearningPath;
@@ -29,11 +32,42 @@ class ContentIntegrityValidatorTests {
 	void 정상_seed_콘텐츠는_무결성_검증을_통과한다() {
 		validator.validate(
 				ScenarioSeedCatalog.scenarios(),
-				LearningDocumentSeedCatalog.documentKeys(),
+				LearningDocumentSeedCatalog.documents(),
 				LearningRelations.all(),
 				CurriculumSeedCatalog.paths(),
 				CurriculumSeedCatalog.modules()
 		);
+	}
+
+	@Test
+	void 학습_문서_메타데이터_참조가_깨지면_진단한다() {
+		SeedDocument brokenDocument = new SeedDocument(
+				"broken-document",
+				"깨진 문서",
+				DocumentCategory.COMPUTE,
+				DocumentLevel.BEGINNER,
+				"요약",
+				"broken.md",
+				1,
+				List.of("missing-document"),
+				List.of("EC2"),
+				List.of("missing-module"),
+				List.of("missing-scenario")
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				List.of(brokenDocument),
+				List.of(),
+				List.of(),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningDocument[broken-document|깨진 문서] category must follow design document categories: COMPUTE")
+				.hasMessageContaining("references unknown prerequisiteDocumentId: missing-document")
+				.hasMessageContaining("references unknown relatedModuleId: missing-module")
+				.hasMessageContaining("references unknown relatedScenarioId: missing-scenario")
+				.hasMessageContaining("relatedScenarioIds must match explicit learning relations");
 	}
 
 	@Test

@@ -26,13 +26,18 @@ class LearningDocumentSeed {
 				return;
 			}
 
-			LearningDocumentSeedCatalog.documents().forEach(document -> seedPort.save(LearningDocument.newDocumentWithKey(
+			LearningDocumentSeedCatalog.documents().forEach(document -> seedPort.save(LearningDocument.newDocumentWithMetadata(
 					document.documentKey(),
 					document.title(),
 					document.category(),
 					document.level(),
 					document.summary(),
-					contentLoader.load(CONTENT_ROOT + document.contentFileName())
+					contentLoader.load(CONTENT_ROOT + document.contentFileName()),
+					document.orderIndex(),
+					document.prerequisiteDocumentIds(),
+					document.conceptTags(),
+					document.relatedModuleIds(),
+					document.relatedScenarioIds()
 			)));
 		});
 	}

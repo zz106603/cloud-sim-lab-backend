@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog.SeedDocument;
+import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
 import com.yunhwan.cloudsimlab.learningpath.domain.LearningPath;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
@@ -26,6 +28,23 @@ public class ContentIntegrityValidator {
 
 	private static final int MIN_EFFECT = -3;
 	private static final int MAX_EFFECT = 3;
+	private static final Set<DocumentCategory> DESIGN_DOCUMENT_CATEGORIES = Set.of(
+			DocumentCategory.CLOUD_BASICS,
+			DocumentCategory.EC2,
+			DocumentCategory.VPC,
+			DocumentCategory.SUBNET,
+			DocumentCategory.SECURITY_GROUP,
+			DocumentCategory.NAT_GATEWAY,
+			DocumentCategory.ALB,
+			DocumentCategory.AUTO_SCALING,
+			DocumentCategory.RDS,
+			DocumentCategory.READ_REPLICA,
+			DocumentCategory.REDIS,
+			DocumentCategory.DATA_CONSISTENCY,
+			DocumentCategory.CONCURRENCY,
+			DocumentCategory.FAILURE_RESPONSE,
+			DocumentCategory.CI_CD
+	);
 
 	public void validate(List<Scenario> scenarios, Set<String> documentKeys, List<LearningRelation> relations) {
 		validate(scenarios, documentKeys, relations, List.of(), List.of());
@@ -48,6 +67,31 @@ public class ContentIntegrityValidator {
 
 		validateRelations(targetRelations, scenarioKeys, targetDocumentKeys, errors);
 		validateCurriculum(targetPaths, targetModules, targetDocumentKeys, scenarioKeys, errors);
+
+		if (!errors.isEmpty()) {
+			throw new ContentIntegrityException("Content integrity validation failed:\n- " + String.join("\n- ", errors));
+		}
+	}
+
+	public void validate(
+			List<Scenario> scenarios,
+			List<SeedDocument> documents,
+			List<LearningRelation> relations,
+			List<LearningPath> paths,
+			List<LearningModule> modules
+	) {
+		List<String> errors = new ArrayList<>();
+		List<Scenario> targetScenarios = scenarios == null ? List.of() : scenarios;
+		List<SeedDocument> targetDocuments = documents == null ? List.of() : documents;
+		List<LearningRelation> targetRelations = relations == null ? List.of() : relations;
+		List<LearningPath> targetPaths = paths == null ? List.of() : paths;
+		List<LearningModule> targetModules = modules == null ? List.of() : modules;
+		Set<String> scenarioKeys = validateScenarios(targetScenarios, errors);
+		Set<String> documentKeys = validateLearningDocuments(targetDocuments, errors);
+
+		validateRelations(targetRelations, scenarioKeys, documentKeys, errors);
+		validateCurriculum(targetPaths, targetModules, documentKeys, scenarioKeys, errors);
+		validateLearningDocumentReferences(targetDocuments, targetRelations, targetModules, scenarioKeys, errors);
 
 		if (!errors.isEmpty()) {
 			throw new ContentIntegrityException("Content integrity validation failed:\n- " + String.join("\n- ", errors));
@@ -362,6 +406,103 @@ public class ContentIntegrityValidator {
 		}
 	}
 
+	private Set<String> validateLearningDocuments(List<SeedDocument> documents, List<String> errors) {
+		Set<String> documentKeys = new HashSet<>();
+		Set<Integer> orderIndexes = new HashSet<>();
+		for (SeedDocument document : documents) {
+			if (document == null) {
+				errors.add("learningDocument[null] must not be null");
+				continue;
+			}
+			String documentLabel = documentLabel(document);
+			validateText(document.documentKey(), documentLabel, "documentKey", errors);
+			validateTrimmed(document.documentKey(), documentLabel, "documentKey", errors);
+			validateText(document.title(), documentLabel, "title", errors);
+			if (document.category() == null) {
+				errors.add(documentLabel + " category must not be null");
+			}
+			else if (!DESIGN_DOCUMENT_CATEGORIES.contains(document.category())) {
+				errors.add(documentLabel + " category must follow design document categories: " + document.category());
+			}
+			if (document.level() == null) {
+				errors.add(documentLabel + " level must not be null");
+			}
+			validateText(document.summary(), documentLabel, "summary", errors);
+			validateText(document.contentFileName(), documentLabel, "contentFileName", errors);
+			if (document.orderIndex() < 1) {
+				errors.add(documentLabel + " orderIndex must be greater than 0: " + document.orderIndex());
+			}
+			if (!orderIndexes.add(document.orderIndex())) {
+				errors.add(documentLabel + " orderIndex is duplicated: " + document.orderIndex());
+			}
+			if (hasText(document.documentKey()) && !documentKeys.add(document.documentKey())) {
+				errors.add(documentLabel + " documentKey is duplicated: " + document.documentKey());
+			}
+			validateStringList(document.prerequisiteDocumentIds(), documentLabel, "prerequisiteDocumentIds", false, errors);
+			validateStringList(document.conceptTags(), documentLabel, "conceptTags", true, errors);
+			validateStringList(document.relatedModuleIds(), documentLabel, "relatedModuleIds", true, errors);
+			validateStringList(document.relatedScenarioIds(), documentLabel, "relatedScenarioIds", true, errors);
+		}
+		return documentKeys;
+	}
+
+	private void validateLearningDocumentReferences(
+			List<SeedDocument> documents,
+			List<LearningRelation> relations,
+			List<LearningModule> modules,
+			Set<String> scenarioKeys,
+			List<String> errors
+	) {
+		Set<String> documentKeys = documents.stream()
+				.filter(document -> document != null && hasText(document.documentKey()))
+				.map(SeedDocument::documentKey)
+				.collect(java.util.stream.Collectors.toSet());
+		Map<String, LearningModule> modulesById = new HashMap<>();
+		for (LearningModule module : modules) {
+			if (module != null && hasText(module.id())) {
+				modulesById.putIfAbsent(module.id(), module);
+			}
+		}
+		Map<String, Set<String>> relationScenarioKeysByDocumentKey = new HashMap<>();
+		for (LearningRelation relation : relations) {
+			if (relation != null && hasText(relation.documentKey()) && hasText(relation.scenarioKey())) {
+				relationScenarioKeysByDocumentKey.computeIfAbsent(relation.documentKey(), ignored -> new HashSet<>())
+						.add(relation.scenarioKey());
+			}
+		}
+
+		for (SeedDocument document : documents) {
+			if (document == null) {
+				continue;
+			}
+			String documentLabel = documentLabel(document);
+			for (String prerequisiteDocumentId : document.prerequisiteDocumentIds()) {
+				if (hasText(prerequisiteDocumentId) && !documentKeys.contains(prerequisiteDocumentId)) {
+					errors.add(documentLabel + " references unknown prerequisiteDocumentId: " + prerequisiteDocumentId);
+				}
+			}
+			for (String relatedModuleId : document.relatedModuleIds()) {
+				LearningModule module = modulesById.get(relatedModuleId);
+				if (hasText(relatedModuleId) && module == null) {
+					errors.add(documentLabel + " references unknown relatedModuleId: " + relatedModuleId);
+				}
+				else if (module != null && !module.documentIds().contains(document.documentKey())) {
+					errors.add(documentLabel + " relatedModuleId does not include documentId: " + relatedModuleId);
+				}
+			}
+			for (String relatedScenarioId : document.relatedScenarioIds()) {
+				if (hasText(relatedScenarioId) && !scenarioKeys.contains(relatedScenarioId)) {
+					errors.add(documentLabel + " references unknown relatedScenarioId: " + relatedScenarioId);
+				}
+			}
+			Set<String> relationScenarioKeys = relationScenarioKeysByDocumentKey.getOrDefault(document.documentKey(), Set.of());
+			Set<String> documentScenarioKeys = new HashSet<>(document.relatedScenarioIds());
+			if (!relationScenarioKeys.equals(documentScenarioKeys)) {
+				errors.add(documentLabel + " relatedScenarioIds must match explicit learning relations");
+			}
+		}
+	}
+
 	private void validateCurriculum(
 			List<LearningPath> paths,
 			List<LearningModule> modules,
@@ -587,5 +728,9 @@ public class ContentIntegrityValidator {
 
 	private String moduleLabel(LearningModule module) {
 		return "learningModule[" + module.id() + "|" + module.title() + "]";
+	}
+
+	private String documentLabel(SeedDocument document) {
+		return "learningDocument[" + document.documentKey() + "|" + document.title() + "]";
 	}
 }
