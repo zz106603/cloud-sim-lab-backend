@@ -476,6 +476,7 @@ public class ContentIntegrityValidator {
 				continue;
 			}
 			String documentLabel = documentLabel(document);
+			boolean hasDocumentKey = hasText(document.documentKey());
 			for (String prerequisiteDocumentId : document.prerequisiteDocumentIds()) {
 				if (hasText(prerequisiteDocumentId) && !documentKeys.contains(prerequisiteDocumentId)) {
 					errors.add(documentLabel + " references unknown prerequisiteDocumentId: " + prerequisiteDocumentId);
@@ -486,7 +487,7 @@ public class ContentIntegrityValidator {
 				if (hasText(relatedModuleId) && module == null) {
 					errors.add(documentLabel + " references unknown relatedModuleId: " + relatedModuleId);
 				}
-				else if (module != null && !module.documentIds().contains(document.documentKey())) {
+				else if (hasDocumentKey && module != null && !module.documentIds().contains(document.documentKey())) {
 					errors.add(documentLabel + " relatedModuleId does not include documentId: " + relatedModuleId);
 				}
 			}
@@ -495,10 +496,12 @@ public class ContentIntegrityValidator {
 					errors.add(documentLabel + " references unknown relatedScenarioId: " + relatedScenarioId);
 				}
 			}
-			Set<String> relationScenarioKeys = relationScenarioKeysByDocumentKey.getOrDefault(document.documentKey(), Set.of());
-			Set<String> documentScenarioKeys = new HashSet<>(document.relatedScenarioIds());
-			if (!relationScenarioKeys.equals(documentScenarioKeys)) {
-				errors.add(documentLabel + " relatedScenarioIds must match explicit learning relations");
+			if (hasDocumentKey) {
+				Set<String> relationScenarioKeys = relationScenarioKeysByDocumentKey.getOrDefault(document.documentKey(), Set.of());
+				Set<String> documentScenarioKeys = new HashSet<>(document.relatedScenarioIds());
+				if (!relationScenarioKeys.equals(documentScenarioKeys)) {
+					errors.add(documentLabel + " relatedScenarioIds must match explicit learning relations");
+				}
 			}
 		}
 	}

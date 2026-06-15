@@ -71,6 +71,61 @@ class ContentIntegrityValidatorTests {
 	}
 
 	@Test
+	void 학습_문서_documentKey가_null이어도_관계_검증_NPE가_아닌_문서_검증_오류로_진단한다() {
+		SeedDocument brokenDocument = new SeedDocument(
+				null,
+				"키 누락 문서",
+				DocumentCategory.EC2,
+				DocumentLevel.BEGINNER,
+				"요약",
+				"broken.md",
+				1,
+				List.of(),
+				List.of("EC2"),
+				List.of("single-server-deployment"),
+				List.of("single-spring-boot")
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				List.of(brokenDocument),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningDocument[null|키 누락 문서] documentKey must not be blank");
+	}
+
+	@Test
+	void 학습_문서_documentKey가_공백이어도_관계_검증_NPE가_아닌_문서_검증_오류로_진단한다() {
+		SeedDocument brokenDocument = new SeedDocument(
+				" ",
+				"공백 키 문서",
+				DocumentCategory.EC2,
+				DocumentLevel.BEGINNER,
+				"요약",
+				"broken.md",
+				1,
+				List.of(),
+				List.of("EC2"),
+				List.of("single-server-deployment"),
+				List.of("single-spring-boot")
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				List.of(brokenDocument),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningDocument[ |공백 키 문서] documentKey must not be blank")
+				.hasMessageContaining("learningDocument[ |공백 키 문서] documentKey must not have surrounding whitespace");
+	}
+
+	@Test
 	void 학습_경로가_다른_경로의_모듈을_참조하면_진단한다() {
 		LearningPath path = new LearningPath(
 				"path-a",
