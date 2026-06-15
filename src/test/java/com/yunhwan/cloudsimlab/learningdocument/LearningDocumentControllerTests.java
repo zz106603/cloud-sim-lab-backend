@@ -44,13 +44,18 @@ class LearningDocumentControllerTests {
 
 	@BeforeEach
 	void setUp() {
-		document = seedPort.save(LearningDocument.newDocumentWithKey(
+		document = seedPort.save(LearningDocument.newDocumentWithMetadata(
 				"ec2-compute-capacity",
 				"Virtual machines and compute capacity",
-				DocumentCategory.COMPUTE,
+				DocumentCategory.EC2,
 				DocumentLevel.BEGINNER,
 				"Understand compute capacity.",
-				"Virtual machines run application workloads on configurable CPU and memory resources."
+				"Virtual machines run application workloads on configurable CPU and memory resources.",
+				1,
+				List.of(),
+				List.of("EC2", "capacity"),
+				List.of("single-server-deployment"),
+				List.of("single-spring-boot", "traffic-spike-compute")
 		));
 		scenario = scenarioSeedPort.save(Scenario.newScenarioWithGraphKey(
 				"single-spring-boot",
@@ -73,11 +78,17 @@ class LearningDocumentControllerTests {
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].id").value(document.getId()))
 				.andExpect(jsonPath("$[0].title").value("Virtual machines and compute capacity"))
-				.andExpect(jsonPath("$[0].category").value("COMPUTE"))
+				.andExpect(jsonPath("$[0].category").value("EC2"))
 				.andExpect(jsonPath("$[0].level").value("BEGINNER"))
 				.andExpect(jsonPath("$[0].summary").value("Understand compute capacity."))
+				.andExpect(jsonPath("$[0].orderIndex").value(1))
+				.andExpect(jsonPath("$[0].prerequisiteDocumentIds", hasSize(0)))
+				.andExpect(jsonPath("$[0].conceptTags", hasSize(2)))
+				.andExpect(jsonPath("$[0].conceptTags[0]").value("EC2"))
 				.andExpect(jsonPath("$[0].relatedModuleIds", hasSize(1)))
 				.andExpect(jsonPath("$[0].relatedModuleIds[0]").value("single-server-deployment"))
+				.andExpect(jsonPath("$[0].relatedScenarioIds", hasSize(2)))
+				.andExpect(jsonPath("$[0].relatedScenarioIds[0]").value("single-spring-boot"))
 				.andExpect(jsonPath("$[0].content").doesNotExist());
 	}
 
@@ -88,8 +99,11 @@ class LearningDocumentControllerTests {
 				.andExpect(jsonPath("$.id").value(document.getId()))
 				.andExpect(jsonPath("$.title").value("Virtual machines and compute capacity"))
 				.andExpect(jsonPath("$.content").value("Virtual machines run application workloads on configurable CPU and memory resources."))
+				.andExpect(jsonPath("$.orderIndex").value(1))
+				.andExpect(jsonPath("$.conceptTags[0]").value("EC2"))
 				.andExpect(jsonPath("$.relatedModuleIds", hasSize(1)))
 				.andExpect(jsonPath("$.relatedModuleIds[0]").value("single-server-deployment"))
+				.andExpect(jsonPath("$.relatedScenarioIds", hasSize(2)))
 				.andExpect(jsonPath("$.relatedScenarios", hasSize(1)))
 				.andExpect(jsonPath("$.relatedScenarios[0].id").value(scenario.getId()))
 				.andExpect(jsonPath("$.relatedScenarios[0].title").value("Scale a web service"))

@@ -72,6 +72,23 @@ public class LearningDocumentService implements GetLearningDocumentUseCase {
 		if (document == null || document.getDocumentKey() == null) {
 			return List.of();
 		}
+		if (!document.getRelatedModuleIds().isEmpty()) {
+			return document.getRelatedModuleIds();
+		}
 		return CurriculumSeedCatalog.moduleIdsForDocument(document.getDocumentKey());
+	}
+
+	@Override
+	public List<String> findRelatedScenarioIds(LearningDocument document) {
+		if (document == null || document.getDocumentKey() == null) {
+			return List.of();
+		}
+		if (!document.getRelatedScenarioIds().isEmpty()) {
+			return document.getRelatedScenarioIds();
+		}
+		return LearningRelations.forDocument(document.getDocumentKey()).stream()
+				.map(LearningRelation::scenarioKey)
+				.distinct()
+				.toList();
 	}
 }

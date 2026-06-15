@@ -26,7 +26,11 @@ public class LearningDocumentController {
 	public List<SummaryResponse> findAll() {
 		return getLearningDocumentUseCase.findAll()
 				.stream()
-				.map(document -> SummaryResponse.from(document, getLearningDocumentUseCase.findRelatedModuleIds(document)))
+				.map(document -> SummaryResponse.from(
+						document,
+						getLearningDocumentUseCase.findRelatedModuleIds(document),
+						getLearningDocumentUseCase.findRelatedScenarioIds(document)
+				))
 				.toList();
 	}
 
@@ -36,6 +40,7 @@ public class LearningDocumentController {
 		return DetailResponse.from(
 				document,
 				getLearningDocumentUseCase.findRelatedModuleIds(document),
+				getLearningDocumentUseCase.findRelatedScenarioIds(document),
 				getLearningDocumentUseCase.findRelatedScenarios(document)
 		);
 	}

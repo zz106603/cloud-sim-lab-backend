@@ -1,5 +1,8 @@
 package com.yunhwan.cloudsimlab.learningdocument.domain;
 
+import java.util.List;
+import java.util.Objects;
+
 public class LearningDocument {
 
 	private final Long id;
@@ -9,6 +12,11 @@ public class LearningDocument {
 	private final DocumentLevel level;
 	private final String summary;
 	private final String content;
+	private final int orderIndex;
+	private final List<String> prerequisiteDocumentIds;
+	private final List<String> conceptTags;
+	private final List<String> relatedModuleIds;
+	private final List<String> relatedScenarioIds;
 
 	public LearningDocument(Long id, String title, DocumentCategory category, DocumentLevel level, String summary, String content) {
 		this(id, null, title, category, level, summary, content);
@@ -23,6 +31,23 @@ public class LearningDocument {
 			String summary,
 			String content
 	) {
+		this(id, documentKey, title, category, level, summary, content, 0, List.of(), List.of(), List.of(), List.of());
+	}
+
+	public LearningDocument(
+			Long id,
+			String documentKey,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			String content,
+			int orderIndex,
+			List<String> prerequisiteDocumentIds,
+			List<String> conceptTags,
+			List<String> relatedModuleIds,
+			List<String> relatedScenarioIds
+	) {
 		this.id = id;
 		this.documentKey = documentKey;
 		this.title = title;
@@ -30,6 +55,11 @@ public class LearningDocument {
 		this.level = level;
 		this.summary = summary;
 		this.content = content;
+		this.orderIndex = orderIndex;
+		this.prerequisiteDocumentIds = copy(prerequisiteDocumentIds);
+		this.conceptTags = copy(conceptTags);
+		this.relatedModuleIds = copy(relatedModuleIds);
+		this.relatedScenarioIds = copy(relatedScenarioIds);
 	}
 
 	public static LearningDocument newDocument(String title, DocumentCategory category, DocumentLevel level, String summary, String content) {
@@ -45,6 +75,35 @@ public class LearningDocument {
 			String content
 	) {
 		return new LearningDocument(null, documentKey, title, category, level, summary, content);
+	}
+
+	public static LearningDocument newDocumentWithMetadata(
+			String documentKey,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			String content,
+			int orderIndex,
+			List<String> prerequisiteDocumentIds,
+			List<String> conceptTags,
+			List<String> relatedModuleIds,
+			List<String> relatedScenarioIds
+	) {
+		return new LearningDocument(
+				null,
+				documentKey,
+				title,
+				category,
+				level,
+				summary,
+				content,
+				orderIndex,
+				prerequisiteDocumentIds,
+				conceptTags,
+				relatedModuleIds,
+				relatedScenarioIds
+		);
 	}
 
 	public Long getId() {
@@ -73,5 +132,29 @@ public class LearningDocument {
 
 	public String getContent() {
 		return content;
+	}
+
+	public int getOrderIndex() {
+		return orderIndex;
+	}
+
+	public List<String> getPrerequisiteDocumentIds() {
+		return prerequisiteDocumentIds;
+	}
+
+	public List<String> getConceptTags() {
+		return conceptTags;
+	}
+
+	public List<String> getRelatedModuleIds() {
+		return relatedModuleIds;
+	}
+
+	public List<String> getRelatedScenarioIds() {
+		return relatedScenarioIds;
+	}
+
+	private static List<String> copy(List<String> values) {
+		return List.copyOf(Objects.requireNonNull(values));
 	}
 }

@@ -21,7 +21,7 @@ class ContentIntegrityValidationConfiguration {
 	CommandLineRunner validateSeedContentIntegrity() {
 		return args -> new ContentIntegrityValidator().validate(
 				ScenarioSeedCatalog.scenarios(),
-				LearningDocumentSeedCatalog.documentKeys(),
+				LearningDocumentSeedCatalog.documents(),
 				LearningRelations.all(),
 				CurriculumSeedCatalog.paths(),
 				CurriculumSeedCatalog.modules()

@@ -14,4 +14,6 @@ public interface GetLearningDocumentUseCase {
 	List<RelatedScenario> findRelatedScenarios(LearningDocument document);
 
 	List<String> findRelatedModuleIds(LearningDocument document);
+
+	List<String> findRelatedScenarioIds(LearningDocument document);
 }
