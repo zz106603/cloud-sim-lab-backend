@@ -62,7 +62,7 @@ public class ContentIntegrityValidator {
 	);
 
 	public void validate(List<Scenario> scenarios, Set<String> documentKeys, List<LearningRelation> relations) {
-		validate(scenarios, documentKeys, relations, List.of(), List.of(), List.of(), false);
+		validate(scenarios, documentKeys, relations, List.of(), List.of(), null, false);
 	}
 
 	public void validate(
@@ -72,7 +72,7 @@ public class ContentIntegrityValidator {
 			List<LearningPath> paths,
 			List<LearningModule> modules
 	) {
-		validate(scenarios, documentKeys, relations, paths, modules, List.of(), true);
+		validate(scenarios, documentKeys, relations, paths, modules, null, true);
 	}
 
 	public void validate(
@@ -101,7 +101,7 @@ public class ContentIntegrityValidator {
 		List<LearningRelation> targetRelations = relations == null ? List.of() : relations;
 		List<LearningPath> targetPaths = paths == null ? List.of() : paths;
 		List<LearningModule> targetModules = modules == null ? List.of() : modules;
-		List<ArchitecturePracticeTemplate> targetArchitecturePractices = architecturePractices == null ? List.of() : architecturePractices;
+		List<ArchitecturePracticeTemplate> targetArchitecturePractices = architecturePractices == null ? null : architecturePractices;
 		Set<String> scenarioKeys = validateScenarios(targetScenarios, errors);
 
 		validateRelations(targetRelations, scenarioKeys, targetDocumentKeys, errors);
@@ -110,10 +110,10 @@ public class ContentIntegrityValidator {
 				targetModules,
 				targetDocumentKeys,
 				scenarioKeys,
-				practiceIds(targetArchitecturePractices),
+				architecturePracticeIds(targetArchitecturePractices),
 				errors
 		);
-		validateArchitecturePractices(targetArchitecturePractices, targetDocumentKeys, scenarioKeys, moduleIds, errors);
+		validateArchitecturePracticesIfRequested(targetArchitecturePractices, targetDocumentKeys, scenarioKeys, moduleIds, errors);
 		validateScenarioLearningContext(targetScenarios, targetDocumentKeys, targetModules, validateScenarioModuleReferences, errors);
 
 		if (!errors.isEmpty()) {
@@ -128,7 +128,7 @@ public class ContentIntegrityValidator {
 			List<LearningPath> paths,
 			List<LearningModule> modules
 	) {
-		validate(scenarios, documents, relations, paths, modules, List.of());
+		validate(scenarios, documents, relations, paths, modules, null);
 	}
 
 	public void validate(
@@ -145,7 +145,7 @@ public class ContentIntegrityValidator {
 		List<LearningRelation> targetRelations = relations == null ? List.of() : relations;
 		List<LearningPath> targetPaths = paths == null ? List.of() : paths;
 		List<LearningModule> targetModules = modules == null ? List.of() : modules;
-		List<ArchitecturePracticeTemplate> targetArchitecturePractices = architecturePractices == null ? List.of() : architecturePractices;
+		List<ArchitecturePracticeTemplate> targetArchitecturePractices = architecturePractices == null ? null : architecturePractices;
 		Set<String> scenarioKeys = validateScenarios(targetScenarios, errors);
 		Set<String> documentKeys = validateLearningDocuments(targetDocuments, errors);
 
@@ -155,11 +155,11 @@ public class ContentIntegrityValidator {
 				targetModules,
 				documentKeys,
 				scenarioKeys,
-				practiceIds(targetArchitecturePractices),
+				architecturePracticeIds(targetArchitecturePractices),
 				errors
 		);
 		validateLearningDocumentReferences(targetDocuments, targetRelations, targetModules, scenarioKeys, errors);
-		validateArchitecturePractices(targetArchitecturePractices, documentKeys, scenarioKeys, moduleIds, errors);
+		validateArchitecturePracticesIfRequested(targetArchitecturePractices, documentKeys, scenarioKeys, moduleIds, errors);
 		validateScenarioLearningContext(targetScenarios, documentKeys, targetModules, true, errors);
 
 		if (!errors.isEmpty()) {
@@ -794,7 +794,7 @@ public class ContentIntegrityValidator {
 			List<String> errors
 	) {
 		String moduleLabel = moduleLabel(module);
-		if (architecturePracticeIds.isEmpty()) {
+		if (architecturePracticeIds == null) {
 			return;
 		}
 		for (String practiceId : module.relatedArchitecturePracticeIds()) {
@@ -804,11 +804,27 @@ public class ContentIntegrityValidator {
 		}
 	}
 
-	private Set<String> practiceIds(List<ArchitecturePracticeTemplate> architecturePractices) {
+	private Set<String> architecturePracticeIds(List<ArchitecturePracticeTemplate> architecturePractices) {
+		if (architecturePractices == null) {
+			return null;
+		}
 		return architecturePractices.stream()
 				.filter(practice -> practice != null && hasText(practice.id()))
 				.map(ArchitecturePracticeTemplate::id)
 				.collect(Collectors.toSet());
+	}
+
+	private void validateArchitecturePracticesIfRequested(
+			List<ArchitecturePracticeTemplate> practices,
+			Set<String> documentKeys,
+			Set<String> scenarioKeys,
+			Set<String> moduleIds,
+			List<String> errors
+	) {
+		if (practices == null) {
+			return;
+		}
+		validateArchitecturePractices(practices, documentKeys, scenarioKeys, moduleIds, errors);
 	}
 
 	private void validateArchitecturePractices(

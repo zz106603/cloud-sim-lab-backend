@@ -73,6 +73,58 @@ class ContentIntegrityValidatorTests {
 	}
 
 	@Test
+	void 아키텍처_연습_검증을_요청하지_않으면_모듈의_relatedArchitecturePracticeIds_참조_검증을_건너뛴다() {
+		assertThatCode(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules()
+		)).doesNotThrowAnyException();
+	}
+
+	@Test
+	void 문서_seed_검증에서도_아키텍처_연습_검증을_요청하지_않으면_관련_참조_검증을_건너뛴다() {
+		assertThatCode(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documents(),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules()
+		)).doesNotThrowAnyException();
+	}
+
+	@Test
+	void 아키텍처_연습_검증을_빈_목록으로_요청하면_모듈의_관련_템플릿_참조를_진단한다() {
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules(),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningModule[single-server-deployment|단일 서버 배포] references unknown relatedArchitecturePracticeId: architecture-builder-basic")
+				.hasMessageContaining("learningModule[alb-private-subnet|ALB와 private subnet 분리] references unknown relatedArchitecturePracticeId: alb-private-subnet-application")
+				.hasMessageContaining("learningModule[data-tier-scaling|RDS, Read Replica, Redis 데이터 계층] references unknown relatedArchitecturePracticeId: read-heavy-scaling-practice");
+	}
+
+	@Test
+	void 문서_seed_검증에서도_아키텍처_연습_검증을_빈_목록으로_요청하면_관련_템플릿_참조를_진단한다() {
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documents(),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules(),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningModule[single-server-deployment|단일 서버 배포] references unknown relatedArchitecturePracticeId: architecture-builder-basic");
+	}
+
+	@Test
 	void 학습_문서_메타데이터_참조가_깨지면_진단한다() {
 		SeedDocument brokenDocument = new SeedDocument(
 				"broken-document",
