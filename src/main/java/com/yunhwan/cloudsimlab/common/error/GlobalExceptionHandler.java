@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.yunhwan.cloudsimlab.architecturepractice.application.ArchitecturePracticeNotFoundException;
 import com.yunhwan.cloudsimlab.learningdocument.application.LearningDocumentNotFoundException;
 import com.yunhwan.cloudsimlab.learningmodule.application.LearningModuleNotFoundException;
 import com.yunhwan.cloudsimlab.learningpath.application.LearningPathNotFoundException;
@@ -40,6 +41,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(ScenarioNotFoundException.class)
 	ErrorResponse handleScenarioNotFound(ScenarioNotFoundException ex) {
 		return new ErrorResponse("SCENARIO_NOT_FOUND", ex.getMessage());
+	}
+
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	@ExceptionHandler(ArchitecturePracticeNotFoundException.class)
+	ErrorResponse handleArchitecturePracticeNotFound(ArchitecturePracticeNotFoundException ex) {
+		return new ErrorResponse("ARCHITECTURE_PRACTICE_NOT_FOUND", ex.getMessage());
 	}
 
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
