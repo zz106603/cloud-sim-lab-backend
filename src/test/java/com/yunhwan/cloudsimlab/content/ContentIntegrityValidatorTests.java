@@ -9,6 +9,11 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.yunhwan.cloudsimlab.architecturepractice.adapter.out.persistence.ArchitecturePracticeSeedCatalog;
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeConnection;
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeLevel;
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeNode;
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeTemplate;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog.SeedDocument;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
@@ -26,6 +31,8 @@ import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioPrerequisiteConcept;
 import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureConnectionType;
+import com.yunhwan.cloudsimlab.userarchitecture.domain.UserArchitectureResourceType;
 
 class ContentIntegrityValidatorTests {
 
@@ -38,7 +45,8 @@ class ContentIntegrityValidatorTests {
 				LearningDocumentSeedCatalog.documents(),
 				LearningRelations.all(),
 				CurriculumSeedCatalog.paths(),
-				CurriculumSeedCatalog.modules()
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
 		);
 	}
 
@@ -116,7 +124,8 @@ class ContentIntegrityValidatorTests {
 				List.of(brokenDocument),
 				LearningRelations.all(),
 				CurriculumSeedCatalog.paths(),
-				CurriculumSeedCatalog.modules()
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
 		))
 				.isInstanceOf(ContentIntegrityException.class)
 				.hasMessageContaining("learningDocument[null|키 누락 문서] documentKey must not be blank");
@@ -143,7 +152,8 @@ class ContentIntegrityValidatorTests {
 				List.of(brokenDocument),
 				LearningRelations.all(),
 				CurriculumSeedCatalog.paths(),
-				CurriculumSeedCatalog.modules()
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
 		))
 				.isInstanceOf(ContentIntegrityException.class)
 				.hasMessageContaining("learningDocument[ |공백 키 문서] documentKey must not be blank")
@@ -298,6 +308,80 @@ class ContentIntegrityValidatorTests {
 				.isInstanceOf(ContentIntegrityException.class)
 				.hasMessageContaining("learningModule[empty-module|빈 모듈] learningGoals must not be empty")
 				.hasMessageContaining("learningModule[empty-module|빈 모듈] must reference at least one document or scenario");
+	}
+
+	@Test
+	void 모듈의_아키텍처_연습_참조가_깨지면_진단한다() {
+		LearningPath path = new LearningPath(
+				"path",
+				"경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				List.of("module")
+		);
+		LearningModule module = new LearningModule(
+				"module",
+				"path",
+				"모듈",
+				"설명",
+				List.of("목표"),
+				List.of(),
+				1,
+				List.of("ec2-compute-capacity"),
+				List.of("single-spring-boot"),
+				List.of("missing-practice")
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path),
+				List.of(module),
+				ArchitecturePracticeSeedCatalog.practices()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningModule[module|모듈] references unknown relatedArchitecturePracticeId: missing-practice");
+	}
+
+	@Test
+	void 아키텍처_연습_템플릿_참조와_starter_연결이_깨지면_진단한다() {
+		ArchitecturePracticeTemplate brokenPractice = new ArchitecturePracticeTemplate(
+				"broken-practice",
+				"깨진 실습",
+				"설명",
+				ArchitecturePracticeLevel.BEGINNER,
+				"목표",
+				List.of("지시", " "),
+				List.of(new ArchitecturePracticeNode("ec2", UserArchitectureResourceType.EC2, "API 서버")),
+				List.of(new ArchitecturePracticeConnection("conn", "ec2", "missing", UserArchitectureConnectionType.REQUEST_FLOW)),
+				List.of(UserArchitectureResourceType.EC2, UserArchitectureResourceType.EC2),
+				List.of(UserArchitectureConnectionType.REQUEST_FLOW, UserArchitectureConnectionType.REQUEST_FLOW),
+				List.of("missing-document"),
+				List.of("missing-scenario"),
+				List.of("missing-module")
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules(),
+				List.of(brokenPractice)
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("architecturePractice[broken-practice|깨진 실습] instructions must not be blank")
+				.hasMessageContaining("starterConnection[conn] targetNodeId references unknown starterNode: missing")
+				.hasMessageContaining("requiredResourceTypes has duplicated resourceType: EC2")
+				.hasMessageContaining("requiredConnectionTypes has duplicated connectionType: REQUEST_FLOW")
+				.hasMessageContaining("architecturePractice[broken-practice|깨진 실습] references unknown relatedDocumentId: missing-document")
+				.hasMessageContaining("architecturePractice[broken-practice|깨진 실습] references unknown relatedScenarioId: missing-scenario")
+				.hasMessageContaining("architecturePractice[broken-practice|깨진 실습] references unknown relatedModuleId: missing-module")
+				.hasMessageContaining("learningModule[single-server-deployment|단일 서버 배포] references unknown relatedArchitecturePracticeId: architecture-builder-basic");
 	}
 
 	@Test
