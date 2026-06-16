@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
+import com.yunhwan.cloudsimlab.architecturepractice.adapter.out.persistence.ArchitecturePracticeSeedCatalog;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog;
 import com.yunhwan.cloudsimlab.learningpath.adapter.out.persistence.CurriculumSeedCatalog;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelations;
@@ -24,7 +25,8 @@ class ContentIntegrityValidationConfiguration {
 				LearningDocumentSeedCatalog.documents(),
 				LearningRelations.all(),
 				CurriculumSeedCatalog.paths(),
-				CurriculumSeedCatalog.modules()
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
 		);
 	}
 }

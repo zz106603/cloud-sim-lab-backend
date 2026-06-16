@@ -6,7 +6,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeConnection;
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeLevel;
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeNode;
+import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeTemplate;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog.SeedDocument;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
@@ -57,7 +62,7 @@ public class ContentIntegrityValidator {
 	);
 
 	public void validate(List<Scenario> scenarios, Set<String> documentKeys, List<LearningRelation> relations) {
-		validate(scenarios, documentKeys, relations, List.of(), List.of(), false);
+		validate(scenarios, documentKeys, relations, List.of(), List.of(), List.of(), false);
 	}
 
 	public void validate(
@@ -67,7 +72,18 @@ public class ContentIntegrityValidator {
 			List<LearningPath> paths,
 			List<LearningModule> modules
 	) {
-		validate(scenarios, documentKeys, relations, paths, modules, true);
+		validate(scenarios, documentKeys, relations, paths, modules, List.of(), true);
+	}
+
+	public void validate(
+			List<Scenario> scenarios,
+			Set<String> documentKeys,
+			List<LearningRelation> relations,
+			List<LearningPath> paths,
+			List<LearningModule> modules,
+			List<ArchitecturePracticeTemplate> architecturePractices
+	) {
+		validate(scenarios, documentKeys, relations, paths, modules, architecturePractices, true);
 	}
 
 	private void validate(
@@ -76,6 +92,7 @@ public class ContentIntegrityValidator {
 			List<LearningRelation> relations,
 			List<LearningPath> paths,
 			List<LearningModule> modules,
+			List<ArchitecturePracticeTemplate> architecturePractices,
 			boolean validateScenarioModuleReferences
 	) {
 		List<String> errors = new ArrayList<>();
@@ -84,10 +101,19 @@ public class ContentIntegrityValidator {
 		List<LearningRelation> targetRelations = relations == null ? List.of() : relations;
 		List<LearningPath> targetPaths = paths == null ? List.of() : paths;
 		List<LearningModule> targetModules = modules == null ? List.of() : modules;
+		List<ArchitecturePracticeTemplate> targetArchitecturePractices = architecturePractices == null ? List.of() : architecturePractices;
 		Set<String> scenarioKeys = validateScenarios(targetScenarios, errors);
 
 		validateRelations(targetRelations, scenarioKeys, targetDocumentKeys, errors);
-		validateCurriculum(targetPaths, targetModules, targetDocumentKeys, scenarioKeys, errors);
+		Set<String> moduleIds = validateCurriculum(
+				targetPaths,
+				targetModules,
+				targetDocumentKeys,
+				scenarioKeys,
+				practiceIds(targetArchitecturePractices),
+				errors
+		);
+		validateArchitecturePractices(targetArchitecturePractices, targetDocumentKeys, scenarioKeys, moduleIds, errors);
 		validateScenarioLearningContext(targetScenarios, targetDocumentKeys, targetModules, validateScenarioModuleReferences, errors);
 
 		if (!errors.isEmpty()) {
@@ -102,18 +128,38 @@ public class ContentIntegrityValidator {
 			List<LearningPath> paths,
 			List<LearningModule> modules
 	) {
+		validate(scenarios, documents, relations, paths, modules, List.of());
+	}
+
+	public void validate(
+			List<Scenario> scenarios,
+			List<SeedDocument> documents,
+			List<LearningRelation> relations,
+			List<LearningPath> paths,
+			List<LearningModule> modules,
+			List<ArchitecturePracticeTemplate> architecturePractices
+	) {
 		List<String> errors = new ArrayList<>();
 		List<Scenario> targetScenarios = scenarios == null ? List.of() : scenarios;
 		List<SeedDocument> targetDocuments = documents == null ? List.of() : documents;
 		List<LearningRelation> targetRelations = relations == null ? List.of() : relations;
 		List<LearningPath> targetPaths = paths == null ? List.of() : paths;
 		List<LearningModule> targetModules = modules == null ? List.of() : modules;
+		List<ArchitecturePracticeTemplate> targetArchitecturePractices = architecturePractices == null ? List.of() : architecturePractices;
 		Set<String> scenarioKeys = validateScenarios(targetScenarios, errors);
 		Set<String> documentKeys = validateLearningDocuments(targetDocuments, errors);
 
 		validateRelations(targetRelations, scenarioKeys, documentKeys, errors);
-		validateCurriculum(targetPaths, targetModules, documentKeys, scenarioKeys, errors);
+		Set<String> moduleIds = validateCurriculum(
+				targetPaths,
+				targetModules,
+				documentKeys,
+				scenarioKeys,
+				practiceIds(targetArchitecturePractices),
+				errors
+		);
 		validateLearningDocumentReferences(targetDocuments, targetRelations, targetModules, scenarioKeys, errors);
+		validateArchitecturePractices(targetArchitecturePractices, documentKeys, scenarioKeys, moduleIds, errors);
 		validateScenarioLearningContext(targetScenarios, documentKeys, targetModules, true, errors);
 
 		if (!errors.isEmpty()) {
@@ -585,20 +631,22 @@ public class ContentIntegrityValidator {
 		}
 	}
 
-	private void validateCurriculum(
+	private Set<String> validateCurriculum(
 			List<LearningPath> paths,
 			List<LearningModule> modules,
 			Set<String> documentKeys,
 			Set<String> scenarioKeys,
+			Set<String> architecturePracticeIds,
 			List<String> errors
 	) {
 		if (paths.isEmpty() && modules.isEmpty()) {
-			return;
+			return Set.of();
 		}
 
 		Set<String> pathIds = validateLearningPaths(paths, errors);
-		validateLearningModules(modules, pathIds, documentKeys, scenarioKeys, errors);
+		Set<String> moduleIds = validateLearningModules(modules, pathIds, documentKeys, scenarioKeys, architecturePracticeIds, errors);
 		validateLearningPathModuleReferences(paths, modules, errors);
+		return moduleIds;
 	}
 
 	private Set<String> validateLearningPaths(List<LearningPath> paths, List<String> errors) {
@@ -644,6 +692,7 @@ public class ContentIntegrityValidator {
 			Set<String> pathIds,
 			Set<String> documentKeys,
 			Set<String> scenarioKeys,
+			Set<String> architecturePracticeIds,
 			List<String> errors
 	) {
 		Set<String> moduleIds = new HashSet<>();
@@ -684,6 +733,7 @@ public class ContentIntegrityValidator {
 			}
 			validateDocumentReferences(module, documentKeys, errors);
 			validateScenarioReferences(module, scenarioKeys, errors);
+			validateArchitecturePracticeReferences(module, architecturePracticeIds, errors);
 		}
 
 		return moduleIds;
@@ -734,6 +784,192 @@ public class ContentIntegrityValidator {
 		for (String scenarioId : module.relatedScenarioIds()) {
 			if (hasText(scenarioId) && !scenarioKeys.contains(scenarioId)) {
 				errors.add(moduleLabel + " references unknown relatedScenarioId: " + scenarioId);
+			}
+		}
+	}
+
+	private void validateArchitecturePracticeReferences(
+			LearningModule module,
+			Set<String> architecturePracticeIds,
+			List<String> errors
+	) {
+		String moduleLabel = moduleLabel(module);
+		if (architecturePracticeIds.isEmpty()) {
+			return;
+		}
+		for (String practiceId : module.relatedArchitecturePracticeIds()) {
+			if (hasText(practiceId) && !architecturePracticeIds.contains(practiceId)) {
+				errors.add(moduleLabel + " references unknown relatedArchitecturePracticeId: " + practiceId);
+			}
+		}
+	}
+
+	private Set<String> practiceIds(List<ArchitecturePracticeTemplate> architecturePractices) {
+		return architecturePractices.stream()
+				.filter(practice -> practice != null && hasText(practice.id()))
+				.map(ArchitecturePracticeTemplate::id)
+				.collect(Collectors.toSet());
+	}
+
+	private void validateArchitecturePractices(
+			List<ArchitecturePracticeTemplate> practices,
+			Set<String> documentKeys,
+			Set<String> scenarioKeys,
+			Set<String> moduleIds,
+			List<String> errors
+	) {
+		Set<String> practiceIds = new HashSet<>();
+		for (ArchitecturePracticeTemplate practice : practices) {
+			if (practice == null) {
+				errors.add("architecturePractice[null] must not be null");
+				continue;
+			}
+			String practiceLabel = architecturePracticeLabel(practice);
+			validateText(practice.id(), practiceLabel, "id", errors);
+			validateTrimmed(practice.id(), practiceLabel, "id", errors);
+			if (hasText(practice.id()) && !practiceIds.add(practice.id())) {
+				errors.add(practiceLabel + " id is duplicated: " + practice.id());
+			}
+			validateText(practice.title(), practiceLabel, "title", errors);
+			validateText(practice.description(), practiceLabel, "description", errors);
+			validateText(practice.learningGoal(), practiceLabel, "learningGoal", errors);
+			if (practice.level() == null) {
+				errors.add(practiceLabel + " level must not be null");
+			}
+			validateStringList(practice.instructions(), practiceLabel, "instructions", true, errors);
+			validateStarterNodes(practice, practiceLabel, errors);
+			validateStarterConnections(practice, practiceLabel, errors);
+			validateRequiredResourceTypes(practice, practiceLabel, errors);
+			validateRequiredConnectionTypes(practice, practiceLabel, errors);
+			validateStringList(practice.relatedDocumentIds(), practiceLabel, "relatedDocumentIds", true, errors);
+			validateStringList(practice.relatedScenarioIds(), practiceLabel, "relatedScenarioIds", true, errors);
+			validateStringList(practice.relatedModuleIds(), practiceLabel, "relatedModuleIds", true, errors);
+			validateArchitecturePracticeDocumentReferences(practice, practiceLabel, documentKeys, errors);
+			validateArchitecturePracticeScenarioReferences(practice, practiceLabel, scenarioKeys, errors);
+			validateArchitecturePracticeModuleReferences(practice, practiceLabel, moduleIds, errors);
+			if (practice.level() == ArchitecturePracticeLevel.BEGINNER
+					&& practice.starterNodes().isEmpty()
+					&& practice.requiredResourceTypes().isEmpty()) {
+				errors.add(practiceLabel + " beginner practice must include starterNodes or requiredResourceTypes");
+			}
+		}
+	}
+
+	private void validateStarterNodes(ArchitecturePracticeTemplate practice, String practiceLabel, List<String> errors) {
+		Set<String> nodeIds = new HashSet<>();
+		for (ArchitecturePracticeNode node : practice.starterNodes()) {
+			if (node == null) {
+				errors.add(practiceLabel + " starterNodes must not contain null");
+				continue;
+			}
+			String nodeLabel = practiceLabel + " starterNode[" + node.id() + "]";
+			validateText(node.id(), nodeLabel, "id", errors);
+			validateTrimmed(node.id(), nodeLabel, "id", errors);
+			validateText(node.displayName(), nodeLabel, "displayName", errors);
+			if (node.resourceType() == null) {
+				errors.add(nodeLabel + " resourceType must not be null");
+			}
+			if (hasText(node.id()) && !nodeIds.add(node.id())) {
+				errors.add(nodeLabel + " id is duplicated: " + node.id());
+			}
+		}
+	}
+
+	private void validateStarterConnections(ArchitecturePracticeTemplate practice, String practiceLabel, List<String> errors) {
+		Set<String> nodeIds = practice.starterNodes().stream()
+				.filter(node -> node != null && hasText(node.id()))
+				.map(ArchitecturePracticeNode::id)
+				.collect(Collectors.toSet());
+		Set<String> connectionIds = new HashSet<>();
+		for (ArchitecturePracticeConnection connection : practice.starterConnections()) {
+			if (connection == null) {
+				errors.add(practiceLabel + " starterConnections must not contain null");
+				continue;
+			}
+			String connectionLabel = practiceLabel + " starterConnection[" + connection.id() + "]";
+			validateText(connection.id(), connectionLabel, "id", errors);
+			validateTrimmed(connection.id(), connectionLabel, "id", errors);
+			validateText(connection.sourceNodeId(), connectionLabel, "sourceNodeId", errors);
+			validateText(connection.targetNodeId(), connectionLabel, "targetNodeId", errors);
+			if (connection.connectionType() == null) {
+				errors.add(connectionLabel + " connectionType must not be null");
+			}
+			if (hasText(connection.id()) && !connectionIds.add(connection.id())) {
+				errors.add(connectionLabel + " id is duplicated: " + connection.id());
+			}
+			if (hasText(connection.sourceNodeId()) && !nodeIds.contains(connection.sourceNodeId())) {
+				errors.add(connectionLabel + " sourceNodeId references unknown starterNode: " + connection.sourceNodeId());
+			}
+			if (hasText(connection.targetNodeId()) && !nodeIds.contains(connection.targetNodeId())) {
+				errors.add(connectionLabel + " targetNodeId references unknown starterNode: " + connection.targetNodeId());
+			}
+			if (hasText(connection.sourceNodeId()) && connection.sourceNodeId().equals(connection.targetNodeId())) {
+				errors.add(connectionLabel + " must not connect a node to itself: " + connection.sourceNodeId());
+			}
+		}
+	}
+
+	private void validateRequiredResourceTypes(ArchitecturePracticeTemplate practice, String practiceLabel, List<String> errors) {
+		Set<String> resourceTypes = new HashSet<>();
+		for (var resourceType : practice.requiredResourceTypes()) {
+			if (resourceType == null) {
+				errors.add(practiceLabel + " requiredResourceTypes must not contain null");
+				continue;
+			}
+			if (!resourceTypes.add(resourceType.name())) {
+				errors.add(practiceLabel + " requiredResourceTypes has duplicated resourceType: " + resourceType.name());
+			}
+		}
+	}
+
+	private void validateRequiredConnectionTypes(ArchitecturePracticeTemplate practice, String practiceLabel, List<String> errors) {
+		Set<String> connectionTypes = new HashSet<>();
+		for (var connectionType : practice.requiredConnectionTypes()) {
+			if (connectionType == null) {
+				errors.add(practiceLabel + " requiredConnectionTypes must not contain null");
+				continue;
+			}
+			if (!connectionTypes.add(connectionType.name())) {
+				errors.add(practiceLabel + " requiredConnectionTypes has duplicated connectionType: " + connectionType.name());
+			}
+		}
+	}
+
+	private void validateArchitecturePracticeDocumentReferences(
+			ArchitecturePracticeTemplate practice,
+			String practiceLabel,
+			Set<String> documentKeys,
+			List<String> errors
+	) {
+		for (String documentId : practice.relatedDocumentIds()) {
+			if (hasText(documentId) && !documentKeys.contains(documentId)) {
+				errors.add(practiceLabel + " references unknown relatedDocumentId: " + documentId);
+			}
+		}
+	}
+
+	private void validateArchitecturePracticeScenarioReferences(
+			ArchitecturePracticeTemplate practice,
+			String practiceLabel,
+			Set<String> scenarioKeys,
+			List<String> errors
+	) {
+		for (String scenarioId : practice.relatedScenarioIds()) {
+			if (hasText(scenarioId) && !scenarioKeys.contains(scenarioId)) {
+				errors.add(practiceLabel + " references unknown relatedScenarioId: " + scenarioId);
+			}
+		}
+	}
+
+	private void validateArchitecturePracticeModuleReferences(
+			ArchitecturePracticeTemplate practice,
+			String practiceLabel,
+			Set<String> moduleIds,
+			List<String> errors
+	) {
+		for (String moduleId : practice.relatedModuleIds()) {
+			if (hasText(moduleId) && !moduleIds.contains(moduleId)) {
+				errors.add(practiceLabel + " references unknown relatedModuleId: " + moduleId);
 			}
 		}
 	}
@@ -853,5 +1089,9 @@ public class ContentIntegrityValidator {
 
 	private String documentLabel(SeedDocument document) {
 		return "learningDocument[" + document.documentKey() + "|" + document.title() + "]";
+	}
+
+	private String architecturePracticeLabel(ArchitecturePracticeTemplate practice) {
+		return "architecturePractice[" + practice.id() + "|" + practice.title() + "]";
 	}
 }
