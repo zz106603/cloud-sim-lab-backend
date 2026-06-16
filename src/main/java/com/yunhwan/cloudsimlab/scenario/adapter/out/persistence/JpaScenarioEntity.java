@@ -10,7 +10,6 @@ import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -68,8 +67,9 @@ class JpaScenarioEntity {
 	@OrderColumn(name = "order_index")
 	private List<JpaScenarioPrerequisiteConceptValue> prerequisiteConcepts = new ArrayList<>();
 
-	@Embedded
-	private JpaScenarioObservationPointValue observationPoint;
+	@ElementCollection
+	@CollectionTable(name = "scenario_observation_point", joinColumns = @JoinColumn(name = "scenario_id"))
+	private List<JpaScenarioObservationPointValue> observationPoints = new ArrayList<>();
 
 	@ElementCollection
 	@CollectionTable(name = "scenario_judgment_perspective", joinColumns = @JoinColumn(name = "scenario_id"))
@@ -95,7 +95,7 @@ class JpaScenarioEntity {
 			List<String> initialArchitecture,
 			List<String> relatedModuleIds,
 			List<JpaScenarioPrerequisiteConceptValue> prerequisiteConcepts,
-			JpaScenarioObservationPointValue observationPoint,
+			List<JpaScenarioObservationPointValue> observationPoints,
 			List<String> judgmentPerspectives,
 			List<JpaScenarioOptionEntity> options
 	) {
@@ -109,7 +109,7 @@ class JpaScenarioEntity {
 		this.initialArchitecture.addAll(initialArchitecture);
 		this.relatedModuleIds.addAll(relatedModuleIds);
 		this.prerequisiteConcepts.addAll(prerequisiteConcepts);
-		this.observationPoint = observationPoint;
+		this.observationPoints.addAll(observationPoints);
 		this.judgmentPerspectives.addAll(judgmentPerspectives);
 		this.options.addAll(options);
 	}
@@ -150,7 +150,7 @@ class JpaScenarioEntity {
 				prerequisiteConcepts.stream()
 						.map(JpaScenarioPrerequisiteConceptValue::toDomain)
 						.toList(),
-				observationPoint == null ? null : observationPoint.toDomain(),
+				observationPoints.isEmpty() ? null : observationPoints.getFirst().toDomain(),
 				judgmentPerspectives,
 				options.stream()
 						.map(JpaScenarioOptionEntity::toDomain)
