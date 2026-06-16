@@ -7,13 +7,15 @@ import java.util.stream.Collectors;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioPrerequisiteConcept;
 import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
 
 public final class ScenarioSeedCatalog {
 
 	private static final List<Scenario> SCENARIOS = List.of(
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"single-spring-boot",
 						"단일 Spring Boot 배포",
 						ScenarioCategory.COMPUTE,
@@ -30,7 +32,7 @@ public final class ScenarioSeedCatalog {
 										effects(2, -2, -1, 1, 0, 0))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"private-subnet-app",
 						"Private subnet 애플리케이션 서버",
 						ScenarioCategory.NETWORK,
@@ -47,7 +49,7 @@ public final class ScenarioSeedCatalog {
 										effects(0, 1, -3, -2, 0, 3))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"traffic-spike-compute",
 						"트래픽 급증 대응",
 						ScenarioCategory.COMPUTE,
@@ -64,7 +66,7 @@ public final class ScenarioSeedCatalog {
 										effects(0, 0, -3, 0, 0, 0))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"rds-failure",
 						"RDS 장애 대응",
 						ScenarioCategory.STORAGE,
@@ -81,7 +83,7 @@ public final class ScenarioSeedCatalog {
 										effects(0, 0, -1, -1, 3, 0))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"read-heavy-performance",
 						"조회 중심 성능 문제",
 						ScenarioCategory.STORAGE,
@@ -98,7 +100,7 @@ public final class ScenarioSeedCatalog {
 										effects(0, 1, -2, 1, 0, 0))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"redis-failure-fallback",
 						"Redis 장애와 RDS fallback 부하 급증",
 						ScenarioCategory.STORAGE,
@@ -115,7 +117,7 @@ public final class ScenarioSeedCatalog {
 										effects(1, 0, -2, 1, 0, 0))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"rds-connection-pool-exhaustion",
 						"RDS Connection Pool 고갈",
 						ScenarioCategory.STORAGE,
@@ -132,7 +134,7 @@ public final class ScenarioSeedCatalog {
 										effects(1, -2, 1, 1, 0, 0))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"alb-health-check-failure",
 						"ALB Health Check 실패",
 						ScenarioCategory.NETWORK,
@@ -149,7 +151,7 @@ public final class ScenarioSeedCatalog {
 										effects(1, -3, 1, 2, 0, -1))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"private-subnet-nat-missing",
 						"Private subnet NAT Gateway 또는 라우팅 누락",
 						ScenarioCategory.NETWORK,
@@ -166,7 +168,7 @@ public final class ScenarioSeedCatalog {
 										effects(1, -1, 2, 1, 0, -3))
 						)
 				),
-				Scenario.newScenarioWithGraphKey(
+				scenario(
 						"security-group-misconfiguration",
 						"Security Group 오설정",
 						ScenarioCategory.SECURITY,
@@ -198,6 +200,142 @@ public final class ScenarioSeedCatalog {
 
 	public static Set<String> scenarioGraphKeys() {
 		return SCENARIO_GRAPH_KEYS;
+	}
+
+	private static Scenario scenario(
+			String graphKey,
+			String title,
+			ScenarioCategory category,
+			ScenarioLevel level,
+			String summary,
+			String description,
+			List<String> initialArchitecture,
+			List<ScenarioOption> options
+	) {
+		return Scenario.newScenarioWithLearningContext(
+				graphKey,
+				title,
+				category,
+				level,
+				summary,
+				description,
+				initialArchitecture,
+				relatedModuleIds(graphKey),
+				prerequisiteConcepts(graphKey),
+				observationPoint(graphKey),
+				judgmentPerspectives(graphKey),
+				options
+		);
+	}
+
+	private static List<String> relatedModuleIds(String graphKey) {
+		return switch (graphKey) {
+			case "single-spring-boot" -> List.of("single-server-deployment");
+			case "private-subnet-app" -> List.of("network-boundary", "alb-private-subnet");
+			case "traffic-spike-compute", "alb-health-check-failure" -> List.of("auto-scaling-health-check");
+			case "rds-failure", "read-heavy-performance", "redis-failure-fallback", "rds-connection-pool-exhaustion" -> List.of("data-tier-scaling");
+			case "private-subnet-nat-missing" -> List.of("user-architecture-practice");
+			case "security-group-misconfiguration" -> List.of("network-boundary", "user-architecture-practice");
+			default -> List.of();
+		};
+	}
+
+	private static List<ScenarioPrerequisiteConcept> prerequisiteConcepts(String graphKey) {
+		return switch (graphKey) {
+			case "single-spring-boot" -> List.of(
+					concept("ec2-capacity", "EC2 용량과 단일 장애 지점", "ec2-compute-capacity", "단일 EC2가 성능과 가용성 한계를 동시에 만드는 이유를 알아야 합니다."),
+					concept("alb-routing", "ALB 요청 분산", "alb-traffic-distribution", "여러 인스턴스로 요청을 보내고 비정상 인스턴스를 우회하는 흐름을 판단해야 합니다."),
+					concept("auto-scaling", "Auto Scaling 기본", "auto-scaling-basics", "수평 확장이 비용과 시작 지연을 동반한다는 점을 함께 봐야 합니다.")
+			);
+			case "private-subnet-app" -> List.of(
+					concept("private-subnet", "Private subnet 애플리케이션 서버", "private-subnet-application-server", "서버 직접 노출을 줄이는 네트워크 경계 기준이 필요합니다."),
+					concept("alb-routing", "ALB 진입점", "alb-traffic-distribution", "외부 요청은 ALB로 받고 내부 서버로 전달하는 구조를 이해해야 합니다."),
+					concept("security-group", "Security Group 최소 허용", "security-group-least-privilege", "ALB, EC2, RDS 사이 필요한 통신만 허용해야 합니다.")
+			);
+			case "traffic-spike-compute" -> List.of(
+					concept("ec2-capacity", "EC2 지표와 용량", "ec2-compute-capacity", "CPU와 응답 시간 지표로 애플리케이션 계층 병목을 판단해야 합니다."),
+					concept("auto-scaling", "Auto Scaling 기본", "auto-scaling-basics", "확장 지표, 최대 용량, 시작 지연이 해결책의 한계를 결정합니다."),
+					concept("alb-target", "ALB target 분산", "alb-traffic-distribution", "증설된 인스턴스가 정상 target으로 요청을 받는 흐름을 확인해야 합니다.")
+			);
+			case "rds-failure" -> List.of(
+					concept("rds-multi-az", "RDS Multi-AZ", "rds-multi-az", "DB 인스턴스 장애 시 자동 장애 조치가 필요한지 판단해야 합니다."),
+					concept("connection-recovery", "RDS 연결 회복", "rds-connection-management", "장애 조치 중 커넥션 풀 재연결과 timeout 영향을 이해해야 합니다."),
+					concept("read-replica-role", "Read Replica 역할", "read-replica-read-scaling", "읽기 확장과 쓰기 장애 대응의 목적 차이를 구분해야 합니다.")
+			);
+			case "read-heavy-performance" -> List.of(
+					concept("rds-bottleneck", "RDS 조회 병목", "rds-connection-management", "연결 수와 느린 쿼리 지표가 조회 지연을 설명하는지 봐야 합니다."),
+					concept("read-replica", "Read Replica 읽기 확장", "read-replica-read-scaling", "읽기 부하 분산과 복제 지연 trade-off를 판단해야 합니다."),
+					concept("redis-cache", "Redis Cache", "redis-cache", "반복 조회 캐시의 성능 개선과 무효화 위험을 함께 이해해야 합니다.")
+			);
+			case "redis-failure-fallback" -> List.of(
+					concept("redis-cache", "Redis Cache 장애 우회", "redis-cache", "캐시 실패가 RDS fallback으로 전파되는 흐름을 이해해야 합니다."),
+					concept("rds-protection", "RDS 연결 보호", "rds-connection-management", "fallback 요청 제한과 connection 보호 기준이 필요합니다.")
+			);
+			case "rds-connection-pool-exhaustion" -> List.of(
+					concept("connection-pool", "RDS 연결 관리", "rds-connection-management", "풀 크기, timeout, 느린 쿼리를 함께 봐야 고갈 원인을 좁힐 수 있습니다."),
+					concept("auto-scaling-connection", "Auto Scaling과 연결 총량", "auto-scaling-basics", "인스턴스 수 증가가 DB 연결 수를 같이 늘릴 수 있음을 알아야 합니다.")
+			);
+			case "alb-health-check-failure" -> List.of(
+					concept("alb-health-check", "ALB Health Check", "alb-traffic-distribution", "정상 target 판정이 요청 성공 여부를 결정하는 흐름을 이해해야 합니다."),
+					concept("security-group", "Security Group 최소 허용", "security-group-least-privilege", "ALB에서 EC2로 가는 포트 허용이 Health Check에 영향을 줍니다.")
+			);
+			case "private-subnet-nat-missing" -> List.of(
+					concept("nat-gateway", "NAT Gateway 아웃바운드", "nat-gateway-outbound-communication", "Private subnet 서버가 외부 API로 나가는 경로를 알아야 합니다."),
+					concept("private-subnet", "Private subnet 경계", "private-subnet-application-server", "서버 직접 노출 없이 아웃바운드만 여는 기준이 필요합니다.")
+			);
+			case "security-group-misconfiguration" -> List.of(
+					concept("security-group", "Security Group 최소 허용", "security-group-least-privilege", "필요 포트와 출발지만 허용하는 참조 관계를 판단해야 합니다."),
+					concept("alb-routing", "ALB target 요청 흐름", "alb-traffic-distribution", "ALB와 EC2 사이 차단이 사용자 요청 실패로 이어지는 흐름을 봐야 합니다.")
+			);
+			default -> List.of();
+		};
+	}
+
+	private static ScenarioObservationPoint observationPoint(String graphKey) {
+		return switch (graphKey) {
+			case "single-spring-boot" -> observation("EC2 CPU, 배포 중 재시작 시간, ALB target 상태", "단일 EC2 장애 또는 배포 재시작", "Client -> EC2 -> RDS에서 Client -> ALB -> EC2 여러 대 -> RDS로 바뀌는지 봅니다.", "Client가 EC2에 직접 닿지 않고 ALB를 거치는지 확인합니다.", "RDS 쓰기 경로는 그대로이므로 데이터 정합성 변화는 작습니다.", "가용성과 성능은 좋아지지만 비용과 운영 복잡도가 늘어납니다.");
+			case "private-subnet-app" -> observation("외부 노출 포트, ALB target 상태, NAT 아웃바운드 실패율", "Public subnet EC2 직접 노출 또는 Private subnet 아웃바운드 단절", "Client -> ALB -> Private EC2 -> RDS 흐름이 유지되는지 봅니다.", "EC2와 RDS가 인터넷에서 직접 접근되지 않는지 확인합니다.", "데이터 경로는 유지되므로 정합성보다는 네트워크 차단 위험이 중심입니다.", "보안은 좋아지지만 NAT/ALB 비용과 라우팅 복잡도가 늘어납니다.");
+			case "traffic-spike-compute" -> observation("ALB target response time, EC2 CPU, 요청 대기 시간", "애플리케이션 서버 계층 용량 부족", "Client -> ALB -> EC2 target 분산이 피크를 따라가는지 봅니다.", "확장 인스턴스도 동일한 보안 경계를 따르는지 확인합니다.", "DB가 병목이 아니면 정합성 위험은 낮지만 세션 상태 저장 방식은 확인해야 합니다.", "처리량과 가용성은 좋아지지만 확장 지연과 비용 부담이 생깁니다.");
+			case "rds-failure" -> observation("RDS failover 시간, DB connection error, 재연결 성공률", "Primary RDS 인스턴스 장애", "Client -> ALB -> EC2 -> RDS 연결이 장애 조치 후 회복되는지 봅니다.", "네트워크 경계보다 DB 엔드포인트와 애플리케이션 재연결 조건이 중심입니다.", "Multi-AZ는 동기 복제로 정합성에 유리하지만 Read Replica는 복제 지연이 있습니다.", "가용성은 좋아지지만 DB 비용과 장애 조치 운영 이해도가 필요합니다.");
+			case "read-heavy-performance" -> observation("RDS CPU, slow query, cache hit rate, replica lag", "조회 부하가 RDS primary에 집중", "조회 요청이 Redis 또는 Read Replica로 분산되고 쓰기는 primary로 유지되는지 봅니다.", "데이터 계층 접근 권한이 애플리케이션에서만 열리는지 확인합니다.", "캐시 TTL, 무효화, replica lag가 최신성 위험을 만듭니다.", "성능은 좋아지지만 비용, 복잡도, 정합성 관리 부담이 늘어납니다.");
+			case "redis-failure-fallback" -> observation("Redis error rate, cache hit rate, RDS CPU, DB connection 수", "Redis 장애 후 모든 조회가 RDS로 몰림", "캐시 실패 시 제한된 fallback으로 RDS에 접근하는지 봅니다.", "장애 우회 경로가 기존 데이터 접근 경계를 넘지 않는지 확인합니다.", "fallback과 TTL 정책에 따라 오래된 데이터 또는 과도한 DB 조회 위험이 있습니다.", "장애 지속 중 기능 유지와 RDS 보호 사이의 제한 정책이 필요합니다.");
+			case "rds-connection-pool-exhaustion" -> observation("Hikari active/idle connection, connection wait time, slow query", "애플리케이션 커넥션 풀과 RDS 연결 한계", "Client -> ALB -> EC2 -> Connection Pool -> RDS 대기 구간을 봅니다.", "보안 경계보다 풀 설정과 DB 연결 제한이 중심입니다.", "긴 트랜잭션은 잠금과 최신성 지연을 함께 만들 수 있습니다.", "대기 시간 완화와 RDS 보호 사이에서 풀 크기/timeout/쿼리 개선을 함께 조정해야 합니다.");
+			case "alb-health-check-failure" -> observation("UnHealthyHostCount, Health Check status, ALB 503", "정상 EC2가 target에서 제외됨", "Client -> ALB -> Target Group -> EC2 Health Check 흐름을 봅니다.", "ALB Security Group에서 EC2 애플리케이션 포트가 허용되는지 확인합니다.", "Health Check 경로가 DB 같은 외부 의존성을 검사하면 정합성보다 가용성 오판 위험이 큽니다.", "정확한 readiness는 가용성을 높이지만 검사 경로와 임계값 운영이 필요합니다.");
+			case "private-subnet-nat-missing" -> observation("외부 API timeout, NAT Gateway bytes, route table 대상", "Private subnet EC2의 인터넷 아웃바운드 경로 누락", "Client -> ALB -> Private EC2 인바운드는 유지하고 EC2 -> NAT Gateway -> Internet 흐름을 봅니다.", "EC2를 Public subnet으로 옮기지 않고 필요한 아웃바운드만 여는지 확인합니다.", "외부 API 호출 실패가 트랜잭션 중단으로 이어질 수 있습니다.", "보안 경계는 유지되지만 NAT 비용과 라우팅 운영 복잡도가 생깁니다.");
+			case "security-group-misconfiguration" -> observation("ALB 502, EC2 DB connection error, 열린 포트 범위", "필수 경로 차단과 과도한 0.0.0.0/0 개방", "Client -> ALB -> EC2 -> RDS 각 구간의 허용 출발지와 포트를 봅니다.", "Security Group 참조로 ALB, EC2, RDS 사이 최소 경계를 구성하는지 확인합니다.", "정합성보다 연결 실패와 보안 노출이 중심 위험입니다.", "빠른 개방은 복구처럼 보일 수 있지만 보안 위험을 크게 키웁니다.");
+			default -> null;
+		};
+	}
+
+	private static List<String> judgmentPerspectives(String graphKey) {
+		return switch (graphKey) {
+			case "private-subnet-app", "security-group-misconfiguration", "private-subnet-nat-missing" -> List.of("security", "availability", "cost", "complexity");
+			case "rds-failure" -> List.of("availability", "consistency", "cost", "complexity");
+			case "read-heavy-performance", "redis-failure-fallback", "rds-connection-pool-exhaustion" -> List.of("performance", "availability", "consistency", "cost", "complexity");
+			default -> List.of("performance", "availability", "cost", "complexity");
+		};
+	}
+
+	private static ScenarioPrerequisiteConcept concept(String conceptId, String displayName, String relatedDocumentId, String reason) {
+		return new ScenarioPrerequisiteConcept(conceptId, displayName, relatedDocumentId, reason);
+	}
+
+	private static ScenarioObservationPoint observation(
+			String bottleneckMetric,
+			String failurePoint,
+			String requestFlow,
+			String securityBoundary,
+			String consistencyRisk,
+			String tradeOffSignal
+	) {
+		return new ScenarioObservationPoint(
+				bottleneckMetric,
+				failurePoint,
+				requestFlow,
+				securityBoundary,
+				consistencyRisk,
+				tradeOffSignal
+		);
 	}
 
 	private static TradeOffEffects effects(
