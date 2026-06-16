@@ -1,5 +1,7 @@
 package com.yunhwan.cloudsimlab.scenario.adapter.out.persistence;
 
+import java.util.List;
+
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 
 import jakarta.persistence.Column;
@@ -8,22 +10,22 @@ import jakarta.persistence.Embeddable;
 @Embeddable
 class JpaScenarioObservationPointValue {
 
-	@Column(length = 500)
+	@Column(nullable = false, length = 500)
 	private String bottleneckMetric;
 
-	@Column(length = 500)
+	@Column(nullable = false, length = 500)
 	private String failurePoint;
 
-	@Column(length = 500)
+	@Column(nullable = false, length = 500)
 	private String requestFlow;
 
-	@Column(length = 500)
+	@Column(nullable = false, length = 500)
 	private String securityBoundary;
 
-	@Column(length = 500)
+	@Column(nullable = false, length = 500)
 	private String consistencyRisk;
 
-	@Column(length = 500)
+	@Column(nullable = false, length = 500)
 	private String tradeOffSignal;
 
 	protected JpaScenarioObservationPointValue() {
@@ -45,18 +47,18 @@ class JpaScenarioObservationPointValue {
 		this.tradeOffSignal = tradeOffSignal;
 	}
 
-	static JpaScenarioObservationPointValue from(ScenarioObservationPoint observationPoint) {
+	static List<JpaScenarioObservationPointValue> from(ScenarioObservationPoint observationPoint) {
 		if (observationPoint == null) {
-			return null;
+			return List.of();
 		}
-		return new JpaScenarioObservationPointValue(
+		return List.of(new JpaScenarioObservationPointValue(
 				observationPoint.bottleneckMetric(),
 				observationPoint.failurePoint(),
 				observationPoint.requestFlow(),
 				observationPoint.securityBoundary(),
 				observationPoint.consistencyRisk(),
 				observationPoint.tradeOffSignal()
-		);
+		));
 	}
 
 	ScenarioObservationPoint toDomain() {

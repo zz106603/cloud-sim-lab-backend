@@ -1,6 +1,7 @@
 package com.yunhwan.cloudsimlab.content;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,28 @@ class ContentIntegrityValidatorTests {
 				CurriculumSeedCatalog.paths(),
 				CurriculumSeedCatalog.modules()
 		);
+	}
+
+	@Test
+	void 모듈_검증을_요청하지_않으면_시나리오_relatedModuleIds_참조_검증을_건너뛴다() {
+		assertThatCode(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all()
+		)).doesNotThrowAnyException();
+	}
+
+	@Test
+	void 모듈_검증을_명시적으로_요청했는데_모듈_목록이_비어_있으면_relatedModuleIds_참조를_진단한다() {
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(),
+				List.of()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("scenario[single-spring-boot|단일 Spring Boot 배포] references unknown relatedModuleId: single-server-deployment");
 	}
 
 	@Test

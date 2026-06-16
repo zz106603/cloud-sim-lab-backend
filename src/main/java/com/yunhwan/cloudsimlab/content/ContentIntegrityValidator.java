@@ -57,7 +57,7 @@ public class ContentIntegrityValidator {
 	);
 
 	public void validate(List<Scenario> scenarios, Set<String> documentKeys, List<LearningRelation> relations) {
-		validate(scenarios, documentKeys, relations, List.of(), List.of());
+		validate(scenarios, documentKeys, relations, List.of(), List.of(), false);
 	}
 
 	public void validate(
@@ -66,6 +66,17 @@ public class ContentIntegrityValidator {
 			List<LearningRelation> relations,
 			List<LearningPath> paths,
 			List<LearningModule> modules
+	) {
+		validate(scenarios, documentKeys, relations, paths, modules, true);
+	}
+
+	private void validate(
+			List<Scenario> scenarios,
+			Set<String> documentKeys,
+			List<LearningRelation> relations,
+			List<LearningPath> paths,
+			List<LearningModule> modules,
+			boolean validateScenarioModuleReferences
 	) {
 		List<String> errors = new ArrayList<>();
 		List<Scenario> targetScenarios = scenarios == null ? List.of() : scenarios;
@@ -77,7 +88,7 @@ public class ContentIntegrityValidator {
 
 		validateRelations(targetRelations, scenarioKeys, targetDocumentKeys, errors);
 		validateCurriculum(targetPaths, targetModules, targetDocumentKeys, scenarioKeys, errors);
-		validateScenarioLearningContext(targetScenarios, targetDocumentKeys, targetModules, errors);
+		validateScenarioLearningContext(targetScenarios, targetDocumentKeys, targetModules, validateScenarioModuleReferences, errors);
 
 		if (!errors.isEmpty()) {
 			throw new ContentIntegrityException("Content integrity validation failed:\n- " + String.join("\n- ", errors));
@@ -103,7 +114,7 @@ public class ContentIntegrityValidator {
 		validateRelations(targetRelations, scenarioKeys, documentKeys, errors);
 		validateCurriculum(targetPaths, targetModules, documentKeys, scenarioKeys, errors);
 		validateLearningDocumentReferences(targetDocuments, targetRelations, targetModules, scenarioKeys, errors);
-		validateScenarioLearningContext(targetScenarios, documentKeys, targetModules, errors);
+		validateScenarioLearningContext(targetScenarios, documentKeys, targetModules, true, errors);
 
 		if (!errors.isEmpty()) {
 			throw new ContentIntegrityException("Content integrity validation failed:\n- " + String.join("\n- ", errors));
@@ -731,6 +742,7 @@ public class ContentIntegrityValidator {
 			List<Scenario> scenarios,
 			Set<String> documentKeys,
 			List<LearningModule> modules,
+			boolean validateModuleReferences,
 			List<String> errors
 	) {
 		Map<String, LearningModule> modulesById = new HashMap<>();
@@ -746,7 +758,7 @@ public class ContentIntegrityValidator {
 			}
 			String scenarioLabel = scenarioLabel(scenario);
 			for (String relatedModuleId : scenario.getRelatedModuleIds()) {
-				if (!hasText(relatedModuleId) || modulesById.isEmpty()) {
+				if (!hasText(relatedModuleId) || !validateModuleReferences) {
 					continue;
 				}
 				LearningModule module = modulesById.get(relatedModuleId);
