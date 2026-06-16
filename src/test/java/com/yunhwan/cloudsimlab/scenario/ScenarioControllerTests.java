@@ -32,7 +32,9 @@ import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioSeedPort;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioPrerequisiteConcept;
 import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
 
 @SpringBootTest
@@ -63,7 +65,7 @@ class ScenarioControllerTests {
 				"Understand compute capacity.",
 				"Virtual machines run application workloads on configurable CPU and memory resources."
 		));
-		computeScenario = seedPort.save(Scenario.newScenarioWithGraphKey(
+		computeScenario = seedPort.save(Scenario.newScenarioWithLearningContext(
 				"single-spring-boot",
 				"웹 서비스 확장",
 				ScenarioCategory.COMPUTE,
@@ -71,6 +73,22 @@ class ScenarioControllerTests {
 				"컴퓨팅 용량을 선택합니다.",
 				"트래픽이 늘어나기 전에 EC2 용량을 비교해야 합니다.",
 				List.of("Client", "EC2", "RDS"),
+				List.of("single-server-deployment"),
+				List.of(new ScenarioPrerequisiteConcept(
+						"ec2-capacity",
+						"EC2 용량",
+						"ec2-compute-capacity",
+						"EC2 용량이 응답 시간과 단일 장애 지점에 주는 영향을 알아야 합니다."
+				)),
+				new ScenarioObservationPoint(
+						"EC2 CPU와 응답 시간",
+						"단일 EC2 장애",
+						"Client -> EC2 -> RDS",
+						"EC2 직접 노출 여부",
+						"RDS 경로는 유지되어 정합성 변화는 작습니다.",
+						"성능 개선과 비용 증가를 함께 봅니다."
+				),
+				List.of("performance", "availability", "cost", "complexity"),
 				List.of(
 						ScenarioOption.newOption("작은 EC2 인스턴스 유지", "비용은 낮지만 용량이 제한적입니다.", 1, false, 0,
 								new TradeOffEffects(0, -2, 2, 2, 0, 0)),
@@ -105,6 +123,10 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$[0].relatedModuleIds", hasSize(1)))
 				.andExpect(jsonPath("$[0].relatedModuleIds[0]").value("single-server-deployment"))
 				.andExpect(jsonPath("$[0].description").doesNotExist())
+				.andExpect(jsonPath("$[0].curriculumMetadata").doesNotExist())
+				.andExpect(jsonPath("$[0].prerequisiteConcepts").doesNotExist())
+				.andExpect(jsonPath("$[0].observationPoint").doesNotExist())
+				.andExpect(jsonPath("$[0].judgmentPerspectives").doesNotExist())
 				.andExpect(jsonPath("$[0].options").doesNotExist());
 	}
 
@@ -138,6 +160,17 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.initialArchitectureGraph.edges[0].target").value("ec2"))
 				.andExpect(jsonPath("$.relatedModuleIds", hasSize(1)))
 				.andExpect(jsonPath("$.relatedModuleIds[0]").value("single-server-deployment"))
+				.andExpect(jsonPath("$.curriculumMetadata.relatedModuleIds", hasSize(1)))
+				.andExpect(jsonPath("$.curriculumMetadata.relatedModuleIds[0]").value("single-server-deployment"))
+				.andExpect(jsonPath("$.curriculumMetadata.judgmentPerspectives", hasSize(4)))
+				.andExpect(jsonPath("$.prerequisiteConcepts", hasSize(1)))
+				.andExpect(jsonPath("$.prerequisiteConcepts[0].conceptId").value("ec2-capacity"))
+				.andExpect(jsonPath("$.prerequisiteConcepts[0].displayName").value("EC2 용량"))
+				.andExpect(jsonPath("$.prerequisiteConcepts[0].relatedDocumentId").value("ec2-compute-capacity"))
+				.andExpect(jsonPath("$.observationPoint.bottleneckMetric").value("EC2 CPU와 응답 시간"))
+				.andExpect(jsonPath("$.observationPoint.failurePoint").value("단일 EC2 장애"))
+				.andExpect(jsonPath("$.observationPoint.requestFlow").value("Client -> EC2 -> RDS"))
+				.andExpect(jsonPath("$.judgmentPerspectives[0]").value("performance"))
 				.andExpect(jsonPath("$.options", hasSize(2)))
 				.andExpect(jsonPath("$.options[0].name").value("작은 EC2 인스턴스 유지"))
 				.andExpect(jsonPath("$.options[0].description").value("비용은 낮지만 용량이 제한적입니다."))

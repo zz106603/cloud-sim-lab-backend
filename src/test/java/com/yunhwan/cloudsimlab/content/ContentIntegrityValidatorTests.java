@@ -21,7 +21,9 @@ import com.yunhwan.cloudsimlab.scenario.adapter.out.persistence.ScenarioSeedCata
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioPrerequisiteConcept;
 import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
 
 class ContentIntegrityValidatorTests {
@@ -346,6 +348,50 @@ class ContentIntegrityValidatorTests {
 				.isInstanceOf(ContentIntegrityException.class)
 				.hasMessageContaining("references unknown scenarioKey: unknown-scenario")
 				.hasMessageContaining("references unknown documentKey: unknown-document");
+	}
+
+	@Test
+	void 시나리오_학습_맥락_참조가_깨지면_진단한다() {
+		Scenario brokenScenario = Scenario.newScenarioWithLearningContext(
+				"single-spring-boot",
+				"깨진 학습 맥락 시나리오",
+				ScenarioCategory.COMPUTE,
+				ScenarioLevel.BEGINNER,
+				"학습 목표",
+				"설명",
+				List.of("Client", "EC2", "RDS"),
+				List.of("missing-module"),
+				List.of(new ScenarioPrerequisiteConcept(
+						"missing-concept",
+						"누락 개념",
+						"missing-document",
+						"존재하지 않는 문서를 참조합니다."
+				)),
+				new ScenarioObservationPoint(
+						"병목 지표",
+						"장애 지점",
+						"요청 흐름",
+						"보안 경계",
+						"정합성 위험",
+						"trade-off 신호"
+				),
+				List.of("performance", "unknown-perspective"),
+				List.of(
+						ScenarioOption.newOptionWithGraphKey("add-alb-auto-scaling", "ALB 추가", "설명", 1, true, 0)
+				)
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				List.of(brokenScenario),
+				LearningDocumentSeedCatalog.documentKeys(),
+				List.of(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("judgmentPerspectives has unknown perspective: unknown-perspective")
+				.hasMessageContaining("references unknown relatedModuleId: missing-module")
+				.hasMessageContaining("prerequisiteConcept[missing-concept] references unknown relatedDocumentId: missing-document");
 	}
 
 	@Test
