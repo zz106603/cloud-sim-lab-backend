@@ -10,6 +10,7 @@ import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -56,6 +57,26 @@ class JpaScenarioEntity {
 	@Column(name = "node", nullable = false, length = 120)
 	private List<String> initialArchitecture = new ArrayList<>();
 
+	@ElementCollection
+	@CollectionTable(name = "scenario_related_module", joinColumns = @JoinColumn(name = "scenario_id"))
+	@OrderColumn(name = "order_index")
+	@Column(name = "module_id", nullable = false, length = 120)
+	private List<String> relatedModuleIds = new ArrayList<>();
+
+	@ElementCollection
+	@CollectionTable(name = "scenario_prerequisite_concept", joinColumns = @JoinColumn(name = "scenario_id"))
+	@OrderColumn(name = "order_index")
+	private List<JpaScenarioPrerequisiteConceptValue> prerequisiteConcepts = new ArrayList<>();
+
+	@Embedded
+	private JpaScenarioObservationPointValue observationPoint;
+
+	@ElementCollection
+	@CollectionTable(name = "scenario_judgment_perspective", joinColumns = @JoinColumn(name = "scenario_id"))
+	@OrderColumn(name = "order_index")
+	@Column(name = "perspective", nullable = false, length = 80)
+	private List<String> judgmentPerspectives = new ArrayList<>();
+
 	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
 	@JoinColumn(name = "scenario_id", nullable = false)
 	private List<JpaScenarioOptionEntity> options = new ArrayList<>();
@@ -72,6 +93,10 @@ class JpaScenarioEntity {
 			String summary,
 			String description,
 			List<String> initialArchitecture,
+			List<String> relatedModuleIds,
+			List<JpaScenarioPrerequisiteConceptValue> prerequisiteConcepts,
+			JpaScenarioObservationPointValue observationPoint,
+			List<String> judgmentPerspectives,
 			List<JpaScenarioOptionEntity> options
 	) {
 		this.id = id;
@@ -82,6 +107,10 @@ class JpaScenarioEntity {
 		this.summary = summary;
 		this.description = description;
 		this.initialArchitecture.addAll(initialArchitecture);
+		this.relatedModuleIds.addAll(relatedModuleIds);
+		this.prerequisiteConcepts.addAll(prerequisiteConcepts);
+		this.observationPoint = observationPoint;
+		this.judgmentPerspectives.addAll(judgmentPerspectives);
 		this.options.addAll(options);
 	}
 
@@ -95,6 +124,12 @@ class JpaScenarioEntity {
 				scenario.getSummary(),
 				scenario.getDescription(),
 				scenario.getInitialArchitecture(),
+				scenario.getRelatedModuleIds(),
+				scenario.getPrerequisiteConcepts().stream()
+						.map(JpaScenarioPrerequisiteConceptValue::from)
+						.toList(),
+				JpaScenarioObservationPointValue.from(scenario.getObservationPoint()),
+				scenario.getJudgmentPerspectives(),
 				scenario.getOptions().stream()
 						.map(JpaScenarioOptionEntity::from)
 						.toList()
@@ -111,6 +146,12 @@ class JpaScenarioEntity {
 				summary,
 				description,
 				initialArchitecture,
+				relatedModuleIds,
+				prerequisiteConcepts.stream()
+						.map(JpaScenarioPrerequisiteConceptValue::toDomain)
+						.toList(),
+				observationPoint == null ? null : observationPoint.toDomain(),
+				judgmentPerspectives,
 				options.stream()
 						.map(JpaScenarioOptionEntity::toDomain)
 						.toList()

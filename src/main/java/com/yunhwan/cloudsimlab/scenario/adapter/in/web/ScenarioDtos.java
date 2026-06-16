@@ -16,7 +16,9 @@ import com.yunhwan.cloudsimlab.scenario.domain.RelatedLearningDocument;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioPrerequisiteConcept;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationReview;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResult;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
@@ -60,6 +62,10 @@ final class ScenarioDtos {
 			ArchitectureGraphResponse initialArchitectureGraph,
 			FailureImpactResponse initialFailureImpact,
 			List<String> relatedModuleIds,
+			CurriculumMetadataResponse curriculumMetadata,
+			List<PrerequisiteConceptResponse> prerequisiteConcepts,
+			ObservationPointResponse observationPoint,
+			List<String> judgmentPerspectives,
 			List<OptionResponse> options,
 			List<RelatedLearningDocumentResponse> relatedLearningDocuments
 	) {
@@ -82,12 +88,69 @@ final class ScenarioDtos {
 					ArchitectureGraphResponse.from(ArchitectureGraphs.initialFor(scenario)),
 					FailureImpactResponse.from(FailureImpactFlows.initialFor(scenario)),
 					relatedModuleIds,
+					CurriculumMetadataResponse.from(relatedModuleIds, scenario),
+					scenario.getPrerequisiteConcepts().stream()
+							.map(PrerequisiteConceptResponse::from)
+							.toList(),
+					ObservationPointResponse.from(scenario.getObservationPoint()),
+					scenario.getJudgmentPerspectives(),
 					scenario.getOptions().stream()
 							.map(OptionResponse::from)
 							.toList(),
 					documents.stream()
 							.map(RelatedLearningDocumentResponse::from)
 							.toList()
+			);
+		}
+	}
+
+	record CurriculumMetadataResponse(
+			List<String> relatedModuleIds,
+			List<String> judgmentPerspectives
+	) {
+		static CurriculumMetadataResponse from(List<String> relatedModuleIds, Scenario scenario) {
+			List<String> moduleIds = relatedModuleIds == null || relatedModuleIds.isEmpty()
+					? scenario.getRelatedModuleIds()
+					: relatedModuleIds;
+			return new CurriculumMetadataResponse(moduleIds, scenario.getJudgmentPerspectives());
+		}
+	}
+
+	record PrerequisiteConceptResponse(
+			String conceptId,
+			String displayName,
+			String relatedDocumentId,
+			String reason
+	) {
+		static PrerequisiteConceptResponse from(ScenarioPrerequisiteConcept concept) {
+			return new PrerequisiteConceptResponse(
+					concept.conceptId(),
+					concept.displayName(),
+					concept.relatedDocumentId(),
+					concept.reason()
+			);
+		}
+	}
+
+	record ObservationPointResponse(
+			String bottleneckMetric,
+			String failurePoint,
+			String requestFlow,
+			String securityBoundary,
+			String consistencyRisk,
+			String tradeOffSignal
+	) {
+		static ObservationPointResponse from(ScenarioObservationPoint observationPoint) {
+			if (observationPoint == null) {
+				return null;
+			}
+			return new ObservationPointResponse(
+					observationPoint.bottleneckMetric(),
+					observationPoint.failurePoint(),
+					observationPoint.requestFlow(),
+					observationPoint.securityBoundary(),
+					observationPoint.consistencyRisk(),
+					observationPoint.tradeOffSignal()
 			);
 		}
 	}
