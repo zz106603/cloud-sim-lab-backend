@@ -23,7 +23,7 @@ public final class CurriculumSeedCatalog {
 					1,
 					List.of("ec2-compute-capacity"),
 					List.of("single-spring-boot"),
-					List.of()
+					List.of("architecture-builder-basic")
 			),
 			new LearningModule(
 					"network-boundary",
@@ -47,7 +47,7 @@ public final class CurriculumSeedCatalog {
 					3,
 					List.of("alb-traffic-distribution", "private-subnet-application-server"),
 					List.of("private-subnet-app", "alb-health-check-failure"),
-					List.of()
+					List.of("alb-private-subnet-application")
 			),
 			new LearningModule(
 					"auto-scaling-health-check",
@@ -71,7 +71,7 @@ public final class CurriculumSeedCatalog {
 					5,
 					List.of("rds-connection-management", "rds-multi-az", "read-replica-read-scaling", "redis-cache"),
 					List.of("rds-failure", "read-heavy-performance", "redis-failure-fallback", "rds-connection-pool-exhaustion"),
-					List.of()
+					List.of("read-heavy-scaling-practice")
 			),
 			new LearningModule(
 					"user-architecture-practice",
@@ -83,7 +83,7 @@ public final class CurriculumSeedCatalog {
 					6,
 					List.of("nat-gateway-outbound-communication", "security-group-least-privilege"),
 					List.of("private-subnet-nat-missing", "security-group-misconfiguration"),
-					List.of("architecture-builder-basic")
+					List.of("architecture-builder-basic", "alb-private-subnet-application", "read-heavy-scaling-practice")
 			)
 	);
 
