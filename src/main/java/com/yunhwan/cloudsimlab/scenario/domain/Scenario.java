@@ -12,6 +12,10 @@ public class Scenario {
 	private final String summary;
 	private final String description;
 	private final List<String> initialArchitecture;
+	private final List<String> relatedModuleIds;
+	private final List<ScenarioPrerequisiteConcept> prerequisiteConcepts;
+	private final ScenarioObservationPoint observationPoint;
+	private final List<String> judgmentPerspectives;
 	private final List<ScenarioOption> options;
 
 	public Scenario(
@@ -37,6 +41,24 @@ public class Scenario {
 			List<String> initialArchitecture,
 			List<ScenarioOption> options
 	) {
+		this(id, graphKey, title, category, level, summary, description, initialArchitecture, List.of(), List.of(), null, List.of(), options);
+	}
+
+	public Scenario(
+			Long id,
+			String graphKey,
+			String title,
+			ScenarioCategory category,
+			ScenarioLevel level,
+			String summary,
+			String description,
+			List<String> initialArchitecture,
+			List<String> relatedModuleIds,
+			List<ScenarioPrerequisiteConcept> prerequisiteConcepts,
+			ScenarioObservationPoint observationPoint,
+			List<String> judgmentPerspectives,
+			List<ScenarioOption> options
+	) {
 		this.id = id;
 		this.graphKey = graphKey;
 		this.title = title;
@@ -45,6 +67,10 @@ public class Scenario {
 		this.summary = summary;
 		this.description = description;
 		this.initialArchitecture = initialArchitecture == null ? List.of() : List.copyOf(initialArchitecture);
+		this.relatedModuleIds = relatedModuleIds == null ? List.of() : List.copyOf(relatedModuleIds);
+		this.prerequisiteConcepts = prerequisiteConcepts == null ? List.of() : List.copyOf(prerequisiteConcepts);
+		this.observationPoint = observationPoint;
+		this.judgmentPerspectives = judgmentPerspectives == null ? List.of() : List.copyOf(judgmentPerspectives);
 		this.options = options == null ? List.of() : List.copyOf(options);
 	}
 
@@ -97,6 +123,37 @@ public class Scenario {
 		return new Scenario(null, graphKey, title, category, level, summary, description, initialArchitecture, options);
 	}
 
+	public static Scenario newScenarioWithLearningContext(
+			String graphKey,
+			String title,
+			ScenarioCategory category,
+			ScenarioLevel level,
+			String summary,
+			String description,
+			List<String> initialArchitecture,
+			List<String> relatedModuleIds,
+			List<ScenarioPrerequisiteConcept> prerequisiteConcepts,
+			ScenarioObservationPoint observationPoint,
+			List<String> judgmentPerspectives,
+			List<ScenarioOption> options
+	) {
+		return new Scenario(
+				null,
+				graphKey,
+				title,
+				category,
+				level,
+				summary,
+				description,
+				initialArchitecture,
+				relatedModuleIds,
+				prerequisiteConcepts,
+				observationPoint,
+				judgmentPerspectives,
+				options
+		);
+	}
+
 	public Long getId() {
 		return id;
 	}
@@ -127,6 +184,22 @@ public class Scenario {
 
 	public List<String> getInitialArchitecture() {
 		return initialArchitecture;
+	}
+
+	public List<String> getRelatedModuleIds() {
+		return relatedModuleIds;
+	}
+
+	public List<ScenarioPrerequisiteConcept> getPrerequisiteConcepts() {
+		return prerequisiteConcepts;
+	}
+
+	public ScenarioObservationPoint getObservationPoint() {
+		return observationPoint;
+	}
+
+	public List<String> getJudgmentPerspectives() {
+		return judgmentPerspectives;
 	}
 
 	public List<ScenarioOption> getOptions() {
