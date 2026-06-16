@@ -21,13 +21,23 @@ import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactEdge;
 import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactFlows;
 import com.yunhwan.cloudsimlab.scenario.domain.FailureImpactResult;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.ScenarioPrerequisiteConcept;
 import com.yunhwan.cloudsimlab.scenario.domain.TradeOffEffects;
 
 public class ContentIntegrityValidator {
 
 	private static final int MIN_EFFECT = -3;
 	private static final int MAX_EFFECT = 3;
+	private static final Set<String> JUDGMENT_PERSPECTIVES = Set.of(
+			"performance",
+			"availability",
+			"cost",
+			"complexity",
+			"consistency",
+			"security"
+	);
 	private static final Set<DocumentCategory> DESIGN_DOCUMENT_CATEGORIES = Set.of(
 			DocumentCategory.CLOUD_BASICS,
 			DocumentCategory.EC2,
@@ -67,6 +77,7 @@ public class ContentIntegrityValidator {
 
 		validateRelations(targetRelations, scenarioKeys, targetDocumentKeys, errors);
 		validateCurriculum(targetPaths, targetModules, targetDocumentKeys, scenarioKeys, errors);
+		validateScenarioLearningContext(targetScenarios, targetDocumentKeys, targetModules, errors);
 
 		if (!errors.isEmpty()) {
 			throw new ContentIntegrityException("Content integrity validation failed:\n- " + String.join("\n- ", errors));
@@ -92,6 +103,7 @@ public class ContentIntegrityValidator {
 		validateRelations(targetRelations, scenarioKeys, documentKeys, errors);
 		validateCurriculum(targetPaths, targetModules, documentKeys, scenarioKeys, errors);
 		validateLearningDocumentReferences(targetDocuments, targetRelations, targetModules, scenarioKeys, errors);
+		validateScenarioLearningContext(targetScenarios, documentKeys, targetModules, errors);
 
 		if (!errors.isEmpty()) {
 			throw new ContentIntegrityException("Content integrity validation failed:\n- " + String.join("\n- ", errors));
@@ -117,6 +129,11 @@ public class ContentIntegrityValidator {
 			validateText(scenario.getTitle(), scenarioLabel, "title", errors);
 			validateText(scenario.getSummary(), scenarioLabel, "summary", errors);
 			validateText(scenario.getDescription(), scenarioLabel, "description", errors);
+			validateStringList(scenario.getRelatedModuleIds(), scenarioLabel, "relatedModuleIds", true, errors);
+			validatePrerequisiteConcepts(scenario, scenarioLabel, errors);
+			validateObservationPoint(scenario, scenarioLabel, errors);
+			validateStringList(scenario.getJudgmentPerspectives(), scenarioLabel, "judgmentPerspectives", true, errors);
+			validateJudgmentPerspectives(scenario, scenarioLabel, errors);
 			if (scenario.getCategory() == null) {
 				errors.add(scenarioLabel + " category must not be null");
 			}
@@ -132,6 +149,57 @@ public class ContentIntegrityValidator {
 			}
 		}
 		return scenarioKeys;
+	}
+
+	private void validatePrerequisiteConcepts(Scenario scenario, String scenarioLabel, List<String> errors) {
+		List<ScenarioPrerequisiteConcept> concepts = scenario.getPrerequisiteConcepts();
+		if (concepts == null) {
+			errors.add(scenarioLabel + " prerequisiteConcepts must not be null");
+			return;
+		}
+		if (concepts.isEmpty()) {
+			errors.add(scenarioLabel + " prerequisiteConcepts must not be empty");
+			return;
+		}
+
+		Set<String> conceptIds = new HashSet<>();
+		for (ScenarioPrerequisiteConcept concept : concepts) {
+			String conceptLabel = scenarioLabel + " prerequisiteConcept[" + (concept == null ? "null" : concept.conceptId()) + "]";
+			if (concept == null) {
+				errors.add(conceptLabel + " must not be null");
+				continue;
+			}
+			validateText(concept.conceptId(), conceptLabel, "conceptId", errors);
+			validateTrimmed(concept.conceptId(), conceptLabel, "conceptId", errors);
+			validateText(concept.displayName(), conceptLabel, "displayName", errors);
+			validateText(concept.relatedDocumentId(), conceptLabel, "relatedDocumentId", errors);
+			validateText(concept.reason(), conceptLabel, "reason", errors);
+			if (hasText(concept.conceptId()) && !conceptIds.add(concept.conceptId())) {
+				errors.add(conceptLabel + " conceptId is duplicated: " + concept.conceptId());
+			}
+		}
+	}
+
+	private void validateObservationPoint(Scenario scenario, String scenarioLabel, List<String> errors) {
+		ScenarioObservationPoint observationPoint = scenario.getObservationPoint();
+		if (observationPoint == null) {
+			errors.add(scenarioLabel + " observationPoint must not be null");
+			return;
+		}
+		validateText(observationPoint.bottleneckMetric(), scenarioLabel, "observationPoint.bottleneckMetric", errors);
+		validateText(observationPoint.failurePoint(), scenarioLabel, "observationPoint.failurePoint", errors);
+		validateText(observationPoint.requestFlow(), scenarioLabel, "observationPoint.requestFlow", errors);
+		validateText(observationPoint.securityBoundary(), scenarioLabel, "observationPoint.securityBoundary", errors);
+		validateText(observationPoint.consistencyRisk(), scenarioLabel, "observationPoint.consistencyRisk", errors);
+		validateText(observationPoint.tradeOffSignal(), scenarioLabel, "observationPoint.tradeOffSignal", errors);
+	}
+
+	private void validateJudgmentPerspectives(Scenario scenario, String scenarioLabel, List<String> errors) {
+		for (String perspective : scenario.getJudgmentPerspectives()) {
+			if (hasText(perspective) && !JUDGMENT_PERSPECTIVES.contains(perspective)) {
+				errors.add(scenarioLabel + " judgmentPerspectives has unknown perspective: " + perspective);
+			}
+		}
 	}
 
 	private boolean validateInitialArchitecture(Scenario scenario, String scenarioLabel, List<String> errors) {
@@ -655,6 +723,44 @@ public class ContentIntegrityValidator {
 		for (String scenarioId : module.relatedScenarioIds()) {
 			if (hasText(scenarioId) && !scenarioKeys.contains(scenarioId)) {
 				errors.add(moduleLabel + " references unknown relatedScenarioId: " + scenarioId);
+			}
+		}
+	}
+
+	private void validateScenarioLearningContext(
+			List<Scenario> scenarios,
+			Set<String> documentKeys,
+			List<LearningModule> modules,
+			List<String> errors
+	) {
+		Map<String, LearningModule> modulesById = new HashMap<>();
+		for (LearningModule module : modules) {
+			if (module != null && hasText(module.id())) {
+				modulesById.putIfAbsent(module.id(), module);
+			}
+		}
+
+		for (Scenario scenario : scenarios) {
+			if (scenario == null) {
+				continue;
+			}
+			String scenarioLabel = scenarioLabel(scenario);
+			for (String relatedModuleId : scenario.getRelatedModuleIds()) {
+				if (!hasText(relatedModuleId) || modulesById.isEmpty()) {
+					continue;
+				}
+				LearningModule module = modulesById.get(relatedModuleId);
+				if (module == null) {
+					errors.add(scenarioLabel + " references unknown relatedModuleId: " + relatedModuleId);
+				}
+				else if (hasText(scenario.getGraphKey()) && !module.relatedScenarioIds().contains(scenario.getGraphKey())) {
+					errors.add(scenarioLabel + " relatedModuleId does not include scenario graphKey: " + relatedModuleId);
+				}
+			}
+			for (ScenarioPrerequisiteConcept concept : scenario.getPrerequisiteConcepts()) {
+				if (concept != null && hasText(concept.relatedDocumentId()) && !documentKeys.contains(concept.relatedDocumentId())) {
+					errors.add(scenarioLabel + " prerequisiteConcept[" + concept.conceptId() + "] references unknown relatedDocumentId: " + concept.relatedDocumentId());
+				}
 			}
 		}
 	}
