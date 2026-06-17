@@ -31,6 +31,14 @@ class LearningRelationsTests {
 	}
 
 	@Test
+	void null과_공백_키는_빈_관계를_반환한다() {
+		assertThat(LearningRelations.forScenario(null)).isEmpty();
+		assertThat(LearningRelations.forScenario(" ")).isEmpty();
+		assertThat(LearningRelations.forDocument(null)).isEmpty();
+		assertThat(LearningRelations.forDocument(" ")).isEmpty();
+	}
+
+	@Test
 	void 기존_시나리오와_문서는_각각_하나_이상의_명시적_관계를_가진다() {
 		List<String> scenarioKeys = List.of(
 				"single-spring-boot",
