@@ -64,8 +64,11 @@ public record LearningModule(
 			List<String> architecturePracticeIds
 	) {
 		List<LearningModulePracticeActivity> activities = new ArrayList<>();
+		List<String> targetDocumentIds = List.copyOf(Objects.requireNonNull(documentIds, "Learning module documentIds must not be null"));
+		List<String> targetScenarioIds = List.copyOf(Objects.requireNonNull(scenarioIds, "Learning module relatedScenarioIds must not be null"));
+		List<String> targetArchitecturePracticeIds = List.copyOf(Objects.requireNonNull(architecturePracticeIds, "Learning module relatedArchitecturePracticeIds must not be null"));
 		int order = 1;
-		for (String documentId : List.copyOf(Objects.requireNonNull(documentIds, "Learning module documentIds must not be null"))) {
+		for (String documentId : targetDocumentIds) {
 			activities.add(new LearningModulePracticeActivity(
 					moduleId + "-read-" + documentId,
 					LearningModulePracticeActivityType.READ_DOCUMENT,
@@ -75,7 +78,7 @@ public record LearningModule(
 					order++
 			));
 		}
-		for (String scenarioId : List.copyOf(Objects.requireNonNull(scenarioIds, "Learning module relatedScenarioIds must not be null"))) {
+		for (String scenarioId : targetScenarioIds) {
 			activities.add(new LearningModulePracticeActivity(
 					moduleId + "-run-" + scenarioId,
 					LearningModulePracticeActivityType.RUN_SCENARIO,
@@ -85,7 +88,7 @@ public record LearningModule(
 					order++
 			));
 		}
-		for (String practiceId : List.copyOf(Objects.requireNonNull(architecturePracticeIds, "Learning module relatedArchitecturePracticeIds must not be null"))) {
+		for (String practiceId : targetArchitecturePracticeIds) {
 			activities.add(new LearningModulePracticeActivity(
 					moduleId + "-build-" + practiceId,
 					LearningModulePracticeActivityType.BUILD_ARCHITECTURE,
