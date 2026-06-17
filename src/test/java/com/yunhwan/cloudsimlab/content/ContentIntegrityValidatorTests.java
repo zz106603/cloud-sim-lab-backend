@@ -19,6 +19,8 @@ import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.Learning
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
+import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivity;
+import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivityType;
 import com.yunhwan.cloudsimlab.learningpath.adapter.out.persistence.CurriculumSeedCatalog;
 import com.yunhwan.cloudsimlab.learningpath.domain.LearningPath;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
@@ -397,6 +399,107 @@ class ContentIntegrityValidatorTests {
 		))
 				.isInstanceOf(ContentIntegrityException.class)
 				.hasMessageContaining("learningModule[module|모듈] references unknown relatedArchitecturePracticeId: missing-practice");
+	}
+
+	@Test
+	void 모듈_실습_활동_대상_ID가_깨지면_진단한다() {
+		LearningPath path = new LearningPath(
+				"path",
+				"경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				List.of("module")
+		);
+		LearningModule module = new LearningModule(
+				"module",
+				"path",
+				"모듈",
+				"설명",
+				List.of("목표"),
+				List.of(),
+				1,
+				List.of("ec2-compute-capacity"),
+				List.of("single-spring-boot"),
+				List.of(),
+				List.of(
+						new LearningModulePracticeActivity(
+								"read-missing",
+								LearningModulePracticeActivityType.READ_DOCUMENT,
+								"누락 문서 읽기",
+								"존재하지 않는 문서 대상입니다.",
+								"missing-document",
+								1
+						),
+						new LearningModulePracticeActivity(
+								"run-mismatch",
+								LearningModulePracticeActivityType.RUN_SCENARIO,
+								"다른 시나리오 실행",
+								"모듈에 포함되지 않은 시나리오 대상입니다.",
+								"rds-failure",
+								2
+						)
+				)
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path),
+				List.of(module),
+				ArchitecturePracticeSeedCatalog.practices()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("practiceActivity[read-missing] references unknown document targetResourceId: missing-document")
+				.hasMessageContaining("practiceActivity[read-missing] targetResourceId must be included in module documentIds: missing-document")
+				.hasMessageContaining("practiceActivity[run-mismatch] targetResourceId must be included in module relatedScenarioIds: rds-failure");
+	}
+
+	@Test
+	void 모듈_실습_활동에_적용_활동이_없으면_진단한다() {
+		LearningPath path = new LearningPath(
+				"path",
+				"경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				List.of("module")
+		);
+		LearningModule module = new LearningModule(
+				"module",
+				"path",
+				"모듈",
+				"설명",
+				List.of("목표"),
+				List.of(),
+				1,
+				List.of("ec2-compute-capacity"),
+				List.of("single-spring-boot"),
+				List.of(),
+				List.of(new LearningModulePracticeActivity(
+						"read-ec2",
+						LearningModulePracticeActivityType.READ_DOCUMENT,
+						"EC2 문서 읽기",
+						"EC2 실행 단위를 확인합니다.",
+						"ec2-compute-capacity",
+						1
+				))
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path),
+				List.of(module)
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningModule[module|모듈] practiceActivities must include at least one RUN_SCENARIO or BUILD_ARCHITECTURE activity");
 	}
 
 	@Test
