@@ -14,6 +14,8 @@ import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeN
 import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeTemplate;
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog.SeedDocument;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentCheckpoint;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentRecallQuestion;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivity;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivityType;
@@ -569,8 +571,64 @@ public class ContentIntegrityValidator {
 			validateStringList(document.conceptTags(), documentLabel, "conceptTags", true, errors);
 			validateStringList(document.relatedModuleIds(), documentLabel, "relatedModuleIds", true, errors);
 			validateStringList(document.relatedScenarioIds(), documentLabel, "relatedScenarioIds", true, errors);
+			validateDocumentCheckpoints(document, errors);
+			validateDocumentRecallQuestions(document, errors);
 		}
 		return documentKeys;
+	}
+
+	private void validateDocumentCheckpoints(SeedDocument document, List<String> errors) {
+		String documentLabel = documentLabel(document);
+		if (document.checkpoints() == null) {
+			errors.add(documentLabel + " checkpoints must not be null");
+			return;
+		}
+		Set<String> checkpointIds = new HashSet<>();
+		for (LearningDocumentCheckpoint checkpoint : document.checkpoints()) {
+			if (checkpoint == null) {
+				errors.add(documentLabel + " checkpoint[null] must not be null");
+				continue;
+			}
+			String checkpointLabel = documentLabel + " checkpoint[" + checkpoint.id() + "]";
+			validateText(checkpoint.id(), checkpointLabel, "id", errors);
+			validateTrimmed(checkpoint.id(), checkpointLabel, "id", errors);
+			validateText(checkpoint.keySentence(), checkpointLabel, "keySentence", errors);
+			validateStringList(checkpoint.judgmentPerspectives(), checkpointLabel, "judgmentPerspectives", true, errors);
+			if (hasText(checkpoint.id()) && !checkpointIds.add(checkpoint.id())) {
+				errors.add(checkpointLabel + " id is duplicated: " + checkpoint.id());
+			}
+			if (checkpoint.judgmentPerspectives() != null) {
+				for (String perspective : checkpoint.judgmentPerspectives()) {
+					if (hasText(perspective) && !JUDGMENT_PERSPECTIVES.contains(perspective)) {
+						errors.add(checkpointLabel + " judgmentPerspectives has unknown perspective: " + perspective);
+					}
+				}
+			}
+		}
+	}
+
+	private void validateDocumentRecallQuestions(SeedDocument document, List<String> errors) {
+		String documentLabel = documentLabel(document);
+		if (document.recallQuestions() == null) {
+			errors.add(documentLabel + " recallQuestions must not be null");
+			return;
+		}
+		Set<String> questionIds = new HashSet<>();
+		for (LearningDocumentRecallQuestion question : document.recallQuestions()) {
+			if (question == null) {
+				errors.add(documentLabel + " recallQuestion[null] must not be null");
+				continue;
+			}
+			String questionLabel = documentLabel + " recallQuestion[" + question.id() + "]";
+			validateText(question.id(), questionLabel, "id", errors);
+			validateTrimmed(question.id(), questionLabel, "id", errors);
+			validateText(question.question(), questionLabel, "question", errors);
+			validateText(question.expectedAnswer(), questionLabel, "expectedAnswer", errors);
+			validateText(question.relatedScenarioId(), questionLabel, "relatedScenarioId", errors);
+			if (hasText(question.id()) && !questionIds.add(question.id())) {
+				errors.add(questionLabel + " id is duplicated: " + question.id());
+			}
+		}
 	}
 
 	private void validateLearningDocumentReferences(
@@ -621,6 +679,18 @@ public class ContentIntegrityValidator {
 			for (String relatedScenarioId : document.relatedScenarioIds()) {
 				if (hasText(relatedScenarioId) && !scenarioKeys.contains(relatedScenarioId)) {
 					errors.add(documentLabel + " references unknown relatedScenarioId: " + relatedScenarioId);
+				}
+			}
+			for (LearningDocumentRecallQuestion question : document.recallQuestions()) {
+				if (question == null) {
+					continue;
+				}
+				String relatedScenarioId = question.relatedScenarioId();
+				if (hasText(relatedScenarioId) && !scenarioKeys.contains(relatedScenarioId)) {
+					errors.add(documentLabel + " recallQuestion[" + question.id() + "] references unknown relatedScenarioId: " + relatedScenarioId);
+				}
+				else if (hasText(relatedScenarioId) && !document.relatedScenarioIds().contains(relatedScenarioId)) {
+					errors.add(documentLabel + " recallQuestion[" + question.id() + "] relatedScenarioId must be included in relatedScenarioIds: " + relatedScenarioId);
 				}
 			}
 			if (hasDocumentKey) {
