@@ -167,6 +167,9 @@ public final class LearningRelations {
 	}
 
 	public static List<LearningRelation> forScenario(String scenarioKey) {
+		if (isBlank(scenarioKey)) {
+			return List.of();
+		}
 		return RELATIONS.stream()
 				.filter(relation -> relation.scenarioKey().equals(scenarioKey))
 				.toList();
@@ -177,9 +180,16 @@ public final class LearningRelations {
 	}
 
 	public static List<LearningRelation> forDocument(String documentKey) {
+		if (isBlank(documentKey)) {
+			return List.of();
+		}
 		return RELATIONS.stream()
 				.filter(relation -> relation.documentKey().equals(documentKey))
 				.toList();
+	}
+
+	private static boolean isBlank(String value) {
+		return value == null || value.isBlank();
 	}
 
 	private static LearningRelation relation(String scenarioKey, String documentKey, String learningReason, String reviewFocus) {

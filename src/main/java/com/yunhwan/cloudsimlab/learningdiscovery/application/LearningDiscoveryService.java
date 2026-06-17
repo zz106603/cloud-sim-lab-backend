@@ -79,13 +79,13 @@ public class LearningDiscoveryService implements GetLearningDiscoveryUseCase {
 		String documentKey = document.getDocumentKey();
 		List<String> relatedModuleIds = unique(Stream.concat(
 				document.getRelatedModuleIds().stream(),
-				context.moduleIdsByDocumentId.getOrDefault(documentKey, List.of()).stream()
+				context.moduleIdsByDocumentId.getOrDefault(documentId, List.of()).stream()
 		));
 		List<String> relatedScenarioIds = unique(Stream.concat(
 				document.getRelatedScenarioIds().stream(),
 				LearningRelations.forDocument(documentKey).stream().map(LearningRelation::scenarioKey)
 		));
-		List<String> relatedArchitecturePracticeIds = context.practiceIdsByDocumentId.getOrDefault(documentKey, List.of());
+		List<String> relatedArchitecturePracticeIds = context.practiceIdsByDocumentId.getOrDefault(documentId, List.of());
 
 		return new LearningDiscoveryItem(
 				LearningDiscoveryResourceType.DOCUMENT,
@@ -109,13 +109,13 @@ public class LearningDiscoveryService implements GetLearningDiscoveryUseCase {
 		String scenarioKey = scenario.getGraphKey();
 		List<String> relatedDocumentIds = unique(Stream.concat(
 				LearningRelations.forScenario(scenarioKey).stream().map(LearningRelation::documentKey),
-				context.documentIdsByScenarioId.getOrDefault(scenarioKey, List.of()).stream()
+				context.documentIdsByScenarioId.getOrDefault(scenarioId, List.of()).stream()
 		));
 		List<String> relatedModuleIds = unique(Stream.concat(
 				scenario.getRelatedModuleIds().stream(),
-				context.moduleIdsByScenarioId.getOrDefault(scenarioKey, List.of()).stream()
+				context.moduleIdsByScenarioId.getOrDefault(scenarioId, List.of()).stream()
 		));
-		List<String> relatedArchitecturePracticeIds = context.practiceIdsByScenarioId.getOrDefault(scenarioKey, List.of());
+		List<String> relatedArchitecturePracticeIds = context.practiceIdsByScenarioId.getOrDefault(scenarioId, List.of());
 
 		return new LearningDiscoveryItem(
 				LearningDiscoveryResourceType.SCENARIO,
@@ -302,12 +302,10 @@ public class LearningDiscoveryService implements GetLearningDiscoveryUseCase {
 					.flatMap(practice -> practice.relatedScenarioIds().stream().map(scenarioId -> Map.entry(scenarioId, practice.id())))
 					.collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
 			Map<String, List<String>> documentIdsByScenarioId = documents.stream()
-					.filter(document -> hasText(document.getDocumentKey()))
-					.flatMap(document -> document.getRelatedScenarioIds().stream().map(scenarioId -> Map.entry(scenarioId, document.getDocumentKey())))
+					.flatMap(document -> document.getRelatedScenarioIds().stream().map(scenarioId -> Map.entry(scenarioId, documentId(document))))
 					.collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
 			Map<String, List<String>> conceptTagsByDocumentId = documents.stream()
-					.filter(document -> hasText(document.getDocumentKey()))
-					.collect(Collectors.toMap(LearningDocument::getDocumentKey, LearningDocument::getConceptTags, (left, right) -> left));
+					.collect(Collectors.toMap(LearningDiscoveryService::documentId, LearningDocument::getConceptTags, (left, right) -> left));
 			Map<String, Integer> moduleOrderById = modules.stream()
 					.collect(Collectors.toMap(LearningModule::id, LearningModule::orderIndex, Math::min));
 			Map<String, String> levelByPathId = CurriculumSeedCatalog.paths().stream()
