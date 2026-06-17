@@ -26,7 +26,7 @@ class LearningDocumentSeed {
 				return;
 			}
 
-			LearningDocumentSeedCatalog.documents().forEach(document -> seedPort.save(LearningDocument.newDocumentWithMetadata(
+			LearningDocumentSeedCatalog.documents().forEach(document -> seedPort.save(LearningDocument.newDocumentWithReinforcement(
 					document.documentKey(),
 					document.title(),
 					document.category(),
@@ -37,7 +37,9 @@ class LearningDocumentSeed {
 					document.prerequisiteDocumentIds(),
 					document.conceptTags(),
 					document.relatedModuleIds(),
-					document.relatedScenarioIds()
+					document.relatedScenarioIds(),
+					document.checkpoints(),
+					document.recallQuestions()
 			)));
 		});
 	}
