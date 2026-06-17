@@ -816,6 +816,9 @@ public class ContentIntegrityValidator {
 	) {
 		String moduleLabel = moduleLabel(module);
 		validateObjectList(module.practiceActivities(), moduleLabel, "practiceActivities", true, errors);
+		if (module.practiceActivities() == null) {
+			return;
+		}
 		Set<String> activityIds = new HashSet<>();
 		Set<Integer> recommendedOrders = new HashSet<>();
 		boolean hasApplyActivity = false;
@@ -882,10 +885,7 @@ public class ContentIntegrityValidator {
 			}
 			return;
 		}
-		if (architecturePracticeIds == null) {
-			return;
-		}
-		if (hasText(activity.targetResourceId()) && !architecturePracticeIds.contains(activity.targetResourceId())) {
+		if (architecturePracticeIds != null && hasText(activity.targetResourceId()) && !architecturePracticeIds.contains(activity.targetResourceId())) {
 			errors.add(activityLabel + " references unknown architecture practice targetResourceId: " + activity.targetResourceId());
 		}
 		if (hasText(activity.targetResourceId()) && !module.relatedArchitecturePracticeIds().contains(activity.targetResourceId())) {

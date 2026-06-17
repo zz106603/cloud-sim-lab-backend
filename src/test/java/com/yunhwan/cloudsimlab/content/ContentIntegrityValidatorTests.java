@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import com.yunhwan.cloudsimlab.architecturepractice.adapter.out.persistence.ArchitecturePracticeSeedCatalog;
 import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeConnection;
@@ -456,6 +457,86 @@ class ContentIntegrityValidatorTests {
 				.hasMessageContaining("practiceActivity[read-missing] references unknown document targetResourceId: missing-document")
 				.hasMessageContaining("practiceActivity[read-missing] targetResourceId must be included in module documentIds: missing-document")
 				.hasMessageContaining("practiceActivity[run-mismatch] targetResourceId must be included in module relatedScenarioIds: rds-failure");
+	}
+
+	@Test
+	void 아키텍처_연습_검증을_요청하지_않아도_모듈_실습_활동의_관련_연습_포함_여부를_진단한다() {
+		LearningPath path = new LearningPath(
+				"path",
+				"경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				List.of("module")
+		);
+		LearningModule module = new LearningModule(
+				"module",
+				"path",
+				"모듈",
+				"설명",
+				List.of("목표"),
+				List.of(),
+				1,
+				List.of("ec2-compute-capacity"),
+				List.of(),
+				List.of(),
+				List.of(new LearningModulePracticeActivity(
+						"build-missing",
+						LearningModulePracticeActivityType.BUILD_ARCHITECTURE,
+						"누락 연습 작성",
+						"모듈에 연결되지 않은 아키텍처 연습 대상입니다.",
+						"missing-practice",
+						1
+				))
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path),
+				List.of(module)
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("practiceActivity[build-missing] targetResourceId must be included in module relatedArchitecturePracticeIds: missing-practice");
+	}
+
+	@Test
+	void 모듈_실습_활동_목록이_null이면_NPE_없이_진단한다() {
+		LearningPath path = new LearningPath(
+				"path",
+				"경로",
+				"설명",
+				"BEGINNER",
+				"목표",
+				true,
+				1,
+				List.of("module")
+		);
+		LearningModule module = Mockito.mock(LearningModule.class);
+		Mockito.when(module.id()).thenReturn("module");
+		Mockito.when(module.pathId()).thenReturn("path");
+		Mockito.when(module.title()).thenReturn("모듈");
+		Mockito.when(module.description()).thenReturn("설명");
+		Mockito.when(module.learningGoals()).thenReturn(List.of("목표"));
+		Mockito.when(module.prerequisites()).thenReturn(List.of());
+		Mockito.when(module.orderIndex()).thenReturn(1);
+		Mockito.when(module.documentIds()).thenReturn(List.of("ec2-compute-capacity"));
+		Mockito.when(module.relatedScenarioIds()).thenReturn(List.of());
+		Mockito.when(module.relatedArchitecturePracticeIds()).thenReturn(List.of());
+		Mockito.when(module.practiceActivities()).thenReturn(null);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				LearningDocumentSeedCatalog.documentKeys(),
+				LearningRelations.all(),
+				List.of(path),
+				List.of(module)
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningModule[module|모듈] practiceActivities must not be null");
 	}
 
 	@Test
