@@ -17,6 +17,8 @@ public class LearningDocument {
 	private final List<String> conceptTags;
 	private final List<String> relatedModuleIds;
 	private final List<String> relatedScenarioIds;
+	private final List<LearningDocumentCheckpoint> checkpoints;
+	private final List<LearningDocumentRecallQuestion> recallQuestions;
 
 	public LearningDocument(Long id, String title, DocumentCategory category, DocumentLevel level, String summary, String content) {
 		this(id, null, title, category, level, summary, content);
@@ -48,6 +50,40 @@ public class LearningDocument {
 			List<String> relatedModuleIds,
 			List<String> relatedScenarioIds
 	) {
+		this(
+				id,
+				documentKey,
+				title,
+				category,
+				level,
+				summary,
+				content,
+				orderIndex,
+				prerequisiteDocumentIds,
+				conceptTags,
+				relatedModuleIds,
+				relatedScenarioIds,
+				List.of(),
+				List.of()
+		);
+	}
+
+	public LearningDocument(
+			Long id,
+			String documentKey,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			String content,
+			int orderIndex,
+			List<String> prerequisiteDocumentIds,
+			List<String> conceptTags,
+			List<String> relatedModuleIds,
+			List<String> relatedScenarioIds,
+			List<LearningDocumentCheckpoint> checkpoints,
+			List<LearningDocumentRecallQuestion> recallQuestions
+	) {
 		this.id = id;
 		this.documentKey = documentKey;
 		this.title = title;
@@ -60,6 +96,8 @@ public class LearningDocument {
 		this.conceptTags = copy(conceptTags);
 		this.relatedModuleIds = copy(relatedModuleIds);
 		this.relatedScenarioIds = copy(relatedScenarioIds);
+		this.checkpoints = copy(checkpoints);
+		this.recallQuestions = copy(recallQuestions);
 	}
 
 	public static LearningDocument newDocument(String title, DocumentCategory category, DocumentLevel level, String summary, String content) {
@@ -103,6 +141,39 @@ public class LearningDocument {
 				conceptTags,
 				relatedModuleIds,
 				relatedScenarioIds
+		);
+	}
+
+	public static LearningDocument newDocumentWithReinforcement(
+			String documentKey,
+			String title,
+			DocumentCategory category,
+			DocumentLevel level,
+			String summary,
+			String content,
+			int orderIndex,
+			List<String> prerequisiteDocumentIds,
+			List<String> conceptTags,
+			List<String> relatedModuleIds,
+			List<String> relatedScenarioIds,
+			List<LearningDocumentCheckpoint> checkpoints,
+			List<LearningDocumentRecallQuestion> recallQuestions
+	) {
+		return new LearningDocument(
+				null,
+				documentKey,
+				title,
+				category,
+				level,
+				summary,
+				content,
+				orderIndex,
+				prerequisiteDocumentIds,
+				conceptTags,
+				relatedModuleIds,
+				relatedScenarioIds,
+				checkpoints,
+				recallQuestions
 		);
 	}
 
@@ -154,7 +225,15 @@ public class LearningDocument {
 		return relatedScenarioIds;
 	}
 
-	private static List<String> copy(List<String> values) {
+	public List<LearningDocumentCheckpoint> getCheckpoints() {
+		return checkpoints;
+	}
+
+	public List<LearningDocumentRecallQuestion> getRecallQuestions() {
+		return recallQuestions;
+	}
+
+	private static <T> List<T> copy(List<T> values) {
 		return List.copyOf(Objects.requireNonNull(values));
 	}
 }
