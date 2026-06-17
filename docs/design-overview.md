@@ -886,7 +886,32 @@ GET /api/scenarios
 
 ---
 
-# 13.7 시나리오 상세 조회
+# 13.7 학습 관계 탐색
+
+```
+GET /api/learning-discovery
+```
+
+추천 경로를 직접 따라가지 않는 사용자가 문서, 시나리오, 모듈, 아키텍처 연습 사이의 연결을 한 번에 탐색할 수 있게 한다.
+
+응답 항목은 `resourceType`, 안정적인 리소스 `id`, 제목, 요약, 카테고리, 난이도, 개념 태그, 관련 문서 ID, 관련 시나리오 ID, 관련 모듈 ID, 관련 아키텍처 연습 ID를 포함한다.
+
+## Query Parameter
+
+| 이름 | 설명 |
+| --- | --- |
+| category | 리소스 카테고리. 문서/시나리오 카테고리와 CURRICULUM, ARCHITECTURE를 문자열로 필터링한다. |
+| level | BEGINNER / INTERMEDIATE / ADVANCED |
+| tag | 개념 태그를 대소문자 구분 없이 정확히 일치시킨다. |
+| resourceType | DOCUMENT / SCENARIO / MODULE / ARCHITECTURE_PRACTICE |
+
+존재하지 않는 필터 값은 오류 대신 빈 배열을 반환한다.
+
+결과는 추천 경로에 포함된 항목, 낮은 난이도, 낮은 `orderIndex`, 리소스 타입, 리소스 ID 순서로 안정적으로 정렬한다.
+
+---
+
+# 13.8 시나리오 상세 조회
 
 ```
 GET /api/scenarios/{scenarioId}
@@ -894,7 +919,7 @@ GET /api/scenarios/{scenarioId}
 
 ---
 
-# 13.8 시뮬레이션 실행
+# 13.9 시뮬레이션 실행
 
 ```
 POST /api/scenarios/{scenarioId}/simulate
