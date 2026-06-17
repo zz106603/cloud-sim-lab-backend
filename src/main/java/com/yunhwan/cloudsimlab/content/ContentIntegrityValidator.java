@@ -662,12 +662,12 @@ public class ContentIntegrityValidator {
 			}
 			String documentLabel = documentLabel(document);
 			boolean hasDocumentKey = hasText(document.documentKey());
-			for (String prerequisiteDocumentId : document.prerequisiteDocumentIds()) {
+			for (String prerequisiteDocumentId : safeList(document.prerequisiteDocumentIds())) {
 				if (hasText(prerequisiteDocumentId) && !documentKeys.contains(prerequisiteDocumentId)) {
 					errors.add(documentLabel + " references unknown prerequisiteDocumentId: " + prerequisiteDocumentId);
 				}
 			}
-			for (String relatedModuleId : document.relatedModuleIds()) {
+			for (String relatedModuleId : safeList(document.relatedModuleIds())) {
 				LearningModule module = modulesById.get(relatedModuleId);
 				if (hasText(relatedModuleId) && module == null) {
 					errors.add(documentLabel + " references unknown relatedModuleId: " + relatedModuleId);
@@ -676,12 +676,13 @@ public class ContentIntegrityValidator {
 					errors.add(documentLabel + " relatedModuleId does not include documentId: " + relatedModuleId);
 				}
 			}
-			for (String relatedScenarioId : document.relatedScenarioIds()) {
+			List<String> relatedScenarioIds = safeList(document.relatedScenarioIds());
+			for (String relatedScenarioId : relatedScenarioIds) {
 				if (hasText(relatedScenarioId) && !scenarioKeys.contains(relatedScenarioId)) {
 					errors.add(documentLabel + " references unknown relatedScenarioId: " + relatedScenarioId);
 				}
 			}
-			for (LearningDocumentRecallQuestion question : document.recallQuestions()) {
+			for (LearningDocumentRecallQuestion question : safeList(document.recallQuestions())) {
 				if (question == null) {
 					continue;
 				}
@@ -689,13 +690,13 @@ public class ContentIntegrityValidator {
 				if (hasText(relatedScenarioId) && !scenarioKeys.contains(relatedScenarioId)) {
 					errors.add(documentLabel + " recallQuestion[" + question.id() + "] references unknown relatedScenarioId: " + relatedScenarioId);
 				}
-				else if (hasText(relatedScenarioId) && !document.relatedScenarioIds().contains(relatedScenarioId)) {
+				else if (hasText(relatedScenarioId) && !relatedScenarioIds.contains(relatedScenarioId)) {
 					errors.add(documentLabel + " recallQuestion[" + question.id() + "] relatedScenarioId must be included in relatedScenarioIds: " + relatedScenarioId);
 				}
 			}
 			if (hasDocumentKey) {
 				Set<String> relationScenarioKeys = relationScenarioKeysByDocumentKey.getOrDefault(document.documentKey(), Set.of());
-				Set<String> documentScenarioKeys = new HashSet<>(document.relatedScenarioIds());
+				Set<String> documentScenarioKeys = new HashSet<>(relatedScenarioIds);
 				if (!relationScenarioKeys.equals(documentScenarioKeys)) {
 					errors.add(documentLabel + " relatedScenarioIds must match explicit learning relations");
 				}
@@ -1210,6 +1211,10 @@ public class ContentIntegrityValidator {
 				errors.add(label + " " + fieldName + " has duplicated value: " + value);
 			}
 		}
+	}
+
+	private <T> List<T> safeList(List<T> values) {
+		return values == null ? List.of() : values;
 	}
 
 	private void validateObjectList(List<?> values, String label, String fieldName, boolean required, List<String> errors) {
