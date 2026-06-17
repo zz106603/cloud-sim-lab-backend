@@ -9,12 +9,14 @@ import org.junit.jupiter.api.Test;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentCheckpoint;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentRecallQuestion;
 
 class JpaLearningDocumentEntityTests {
 
 	@Test
 	void 명시적_관계에_사용하는_문서_키를_영속성_매핑에서_유지한다() {
-		LearningDocument document = LearningDocument.newDocumentWithMetadata(
+		LearningDocument document = LearningDocument.newDocumentWithReinforcement(
 				"ec2-compute-capacity",
 				"EC2와 컴퓨팅 용량",
 				DocumentCategory.EC2,
@@ -25,7 +27,18 @@ class JpaLearningDocumentEntityTests {
 				List.of(),
 				List.of("EC2", "capacity"),
 				List.of("single-server-deployment"),
-				List.of("single-spring-boot")
+				List.of("single-spring-boot"),
+				List.of(new LearningDocumentCheckpoint(
+						"ec2-cp-capacity",
+						"EC2 크기 증설은 성능과 비용을 함께 바꿉니다.",
+						List.of("performance", "cost")
+				)),
+				List.of(new LearningDocumentRecallQuestion(
+						"ec2-rq-single",
+						"단일 EC2의 남는 위험은 무엇인가요?",
+						"단일 장애 지점과 배포 중단 위험입니다.",
+						"single-spring-boot"
+				))
 		);
 
 		LearningDocument mapped = JpaLearningDocumentEntity.from(document).toDomain();
@@ -36,5 +49,9 @@ class JpaLearningDocumentEntityTests {
 		assertThat(mapped.getConceptTags()).containsExactly("EC2", "capacity");
 		assertThat(mapped.getRelatedModuleIds()).containsExactly("single-server-deployment");
 		assertThat(mapped.getRelatedScenarioIds()).containsExactly("single-spring-boot");
+		assertThat(mapped.getCheckpoints()).hasSize(1);
+		assertThat(mapped.getCheckpoints().get(0).judgmentPerspectives()).containsExactly("performance", "cost");
+		assertThat(mapped.getRecallQuestions()).hasSize(1);
+		assertThat(mapped.getRecallQuestions().get(0).relatedScenarioId()).isEqualTo("single-spring-boot");
 	}
 }

@@ -19,6 +19,8 @@ import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.Learning
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentCheckpoint;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentRecallQuestion;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivity;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivityType;
@@ -213,6 +215,75 @@ class ContentIntegrityValidatorTests {
 				.isInstanceOf(ContentIntegrityException.class)
 				.hasMessageContaining("learningDocument[ |공백 키 문서] documentKey must not be blank")
 				.hasMessageContaining("learningDocument[ |공백 키 문서] documentKey must not have surrounding whitespace");
+	}
+
+	@Test
+	void 학습_문서_체크포인트_판단_관점이_trade_off_지표와_다르면_진단한다() {
+		SeedDocument brokenDocument = new SeedDocument(
+				"ec2-compute-capacity",
+				"EC2와 컴퓨팅 용량",
+				DocumentCategory.EC2,
+				DocumentLevel.BEGINNER,
+				"요약",
+				"ec2-compute-capacity.md",
+				1,
+				List.of(),
+				List.of("EC2"),
+				List.of("single-server-deployment"),
+				List.of("single-spring-boot", "traffic-spike-compute"),
+				List.of(new LearningDocumentCheckpoint(
+						"bad-perspective",
+						"잘못된 관점입니다.",
+						List.of("speed")
+				)),
+				List.of()
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				List.of(brokenDocument),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("checkpoint[bad-perspective] judgmentPerspectives has unknown perspective: speed");
+	}
+
+	@Test
+	void 학습_문서_회상_질문_시나리오가_문서_관련_시나리오에_없으면_진단한다() {
+		SeedDocument brokenDocument = new SeedDocument(
+				"ec2-compute-capacity",
+				"EC2와 컴퓨팅 용량",
+				DocumentCategory.EC2,
+				DocumentLevel.BEGINNER,
+				"요약",
+				"ec2-compute-capacity.md",
+				1,
+				List.of(),
+				List.of("EC2"),
+				List.of("single-server-deployment"),
+				List.of("single-spring-boot", "traffic-spike-compute"),
+				List.of(),
+				List.of(new LearningDocumentRecallQuestion(
+						"bad-scenario",
+						"관련 없는 시나리오 질문입니다.",
+						"문서 관련 시나리오에 포함되어야 합니다.",
+						"rds-failure"
+				))
+		);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				List.of(brokenDocument),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("recallQuestion[bad-scenario] relatedScenarioId must be included in relatedScenarioIds: rds-failure");
 	}
 
 	@Test

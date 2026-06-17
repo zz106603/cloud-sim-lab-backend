@@ -19,6 +19,8 @@ import com.yunhwan.cloudsimlab.learningdocument.application.port.LearningDocumen
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentLevel;
 import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocument;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentCheckpoint;
+import com.yunhwan.cloudsimlab.learningdocument.domain.LearningDocumentRecallQuestion;
 import com.yunhwan.cloudsimlab.scenario.application.port.ScenarioSeedPort;
 import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
@@ -44,7 +46,7 @@ class LearningDocumentControllerTests {
 
 	@BeforeEach
 	void setUp() {
-		document = seedPort.save(LearningDocument.newDocumentWithMetadata(
+		document = seedPort.save(LearningDocument.newDocumentWithReinforcement(
 				"ec2-compute-capacity",
 				"Virtual machines and compute capacity",
 				DocumentCategory.EC2,
@@ -55,7 +57,18 @@ class LearningDocumentControllerTests {
 				List.of(),
 				List.of("EC2", "capacity"),
 				List.of("single-server-deployment"),
-				List.of("single-spring-boot", "traffic-spike-compute")
+				List.of("single-spring-boot", "traffic-spike-compute"),
+				List.of(new LearningDocumentCheckpoint(
+						"ec2-cp-capacity",
+						"EC2 capacity affects performance, cost, and failure scope.",
+						List.of("performance", "cost", "availability")
+				)),
+				List.of(new LearningDocumentRecallQuestion(
+						"ec2-rq-single-point",
+						"What remains risky when only one EC2 instance serves traffic?",
+						"Single point of failure and deployment interruption remain.",
+						"single-spring-boot"
+				))
 		));
 		scenario = scenarioSeedPort.save(Scenario.newScenarioWithGraphKey(
 				"single-spring-boot",
@@ -89,6 +102,10 @@ class LearningDocumentControllerTests {
 				.andExpect(jsonPath("$[0].relatedModuleIds[0]").value("single-server-deployment"))
 				.andExpect(jsonPath("$[0].relatedScenarioIds", hasSize(2)))
 				.andExpect(jsonPath("$[0].relatedScenarioIds[0]").value("single-spring-boot"))
+				.andExpect(jsonPath("$[0].checkpointCount").value(1))
+				.andExpect(jsonPath("$[0].recallQuestionCount").value(1))
+				.andExpect(jsonPath("$[0].checkpoints").doesNotExist())
+				.andExpect(jsonPath("$[0].recallQuestions").doesNotExist())
 				.andExpect(jsonPath("$[0].content").doesNotExist());
 	}
 
@@ -104,6 +121,14 @@ class LearningDocumentControllerTests {
 				.andExpect(jsonPath("$.relatedModuleIds", hasSize(1)))
 				.andExpect(jsonPath("$.relatedModuleIds[0]").value("single-server-deployment"))
 				.andExpect(jsonPath("$.relatedScenarioIds", hasSize(2)))
+				.andExpect(jsonPath("$.checkpoints", hasSize(1)))
+				.andExpect(jsonPath("$.checkpoints[0].id").value("ec2-cp-capacity"))
+				.andExpect(jsonPath("$.checkpoints[0].keySentence").value("EC2 capacity affects performance, cost, and failure scope."))
+				.andExpect(jsonPath("$.checkpoints[0].judgmentPerspectives", hasSize(3)))
+				.andExpect(jsonPath("$.checkpoints[0].judgmentPerspectives[0]").value("performance"))
+				.andExpect(jsonPath("$.recallQuestions", hasSize(1)))
+				.andExpect(jsonPath("$.recallQuestions[0].id").value("ec2-rq-single-point"))
+				.andExpect(jsonPath("$.recallQuestions[0].relatedScenarioId").value("single-spring-boot"))
 				.andExpect(jsonPath("$.relatedScenarios", hasSize(1)))
 				.andExpect(jsonPath("$.relatedScenarios[0].id").value(scenario.getId()))
 				.andExpect(jsonPath("$.relatedScenarios[0].title").value("Scale a web service"))
