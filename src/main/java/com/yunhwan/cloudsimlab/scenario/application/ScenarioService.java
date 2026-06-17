@@ -499,13 +499,9 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 			List<ScenarioOption> selectedOptions,
 			SimulationResultType resultType
 	) {
-		List<String> optionCriteria = selectedOptions.stream()
+		return selectedOptions.stream()
 				.map(option -> criterionFor(option, resultType, primaryPerspectiveFor(option, scenario.getJudgmentPerspectives())))
 				.toList();
-		if (!optionCriteria.isEmpty()) {
-			return optionCriteria;
-		}
-		return List.of(nextStepFor(resultType));
 	}
 
 	private String criterionFor(ScenarioOption option, SimulationResultType resultType, String perspective) {
