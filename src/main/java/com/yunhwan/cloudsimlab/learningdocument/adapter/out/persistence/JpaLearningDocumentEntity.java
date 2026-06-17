@@ -80,6 +80,18 @@ class JpaLearningDocumentEntity {
 	@BatchSize(size = 50)
 	private List<String> relatedScenarioIds = new ArrayList<>();
 
+	@ElementCollection
+	@CollectionTable(name = "learning_document_checkpoint", joinColumns = @JoinColumn(name = "document_id"))
+	@OrderColumn(name = "checkpoint_order")
+	@BatchSize(size = 50)
+	private List<JpaLearningDocumentCheckpointValue> checkpoints = new ArrayList<>();
+
+	@ElementCollection
+	@CollectionTable(name = "learning_document_recall_question", joinColumns = @JoinColumn(name = "document_id"))
+	@OrderColumn(name = "sort_order")
+	@BatchSize(size = 50)
+	private List<JpaLearningDocumentRecallQuestionValue> recallQuestions = new ArrayList<>();
+
 	protected JpaLearningDocumentEntity() {
 	}
 
@@ -94,7 +106,9 @@ class JpaLearningDocumentEntity {
 			List<String> prerequisiteDocumentIds,
 			List<String> conceptTags,
 			List<String> relatedModuleIds,
-			List<String> relatedScenarioIds
+			List<String> relatedScenarioIds,
+			List<JpaLearningDocumentCheckpointValue> checkpoints,
+			List<JpaLearningDocumentRecallQuestionValue> recallQuestions
 	) {
 		this.documentKey = documentKey;
 		this.title = title;
@@ -107,6 +121,8 @@ class JpaLearningDocumentEntity {
 		this.conceptTags = new ArrayList<>(conceptTags);
 		this.relatedModuleIds = new ArrayList<>(relatedModuleIds);
 		this.relatedScenarioIds = new ArrayList<>(relatedScenarioIds);
+		this.checkpoints = new ArrayList<>(checkpoints);
+		this.recallQuestions = new ArrayList<>(recallQuestions);
 	}
 
 	static JpaLearningDocumentEntity from(LearningDocument document) {
@@ -121,7 +137,13 @@ class JpaLearningDocumentEntity {
 				document.getPrerequisiteDocumentIds(),
 				document.getConceptTags(),
 				document.getRelatedModuleIds(),
-				document.getRelatedScenarioIds()
+				document.getRelatedScenarioIds(),
+				document.getCheckpoints().stream()
+						.map(JpaLearningDocumentCheckpointValue::from)
+						.toList(),
+				document.getRecallQuestions().stream()
+						.map(JpaLearningDocumentRecallQuestionValue::from)
+						.toList()
 		);
 	}
 
@@ -138,7 +160,13 @@ class JpaLearningDocumentEntity {
 				prerequisiteDocumentIds,
 				conceptTags,
 				relatedModuleIds,
-				relatedScenarioIds
+				relatedScenarioIds,
+				checkpoints.stream()
+						.map(JpaLearningDocumentCheckpointValue::toDomain)
+						.toList(),
+				recallQuestions.stream()
+						.map(JpaLearningDocumentRecallQuestionValue::toDomain)
+						.toList()
 		);
 	}
 }
