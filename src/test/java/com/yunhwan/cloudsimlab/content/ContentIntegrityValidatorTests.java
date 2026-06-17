@@ -287,6 +287,48 @@ class ContentIntegrityValidatorTests {
 	}
 
 	@Test
+	void 학습_문서_recallQuestions가_null이어도_NPE가_아닌_검증_오류로_진단한다() {
+		SeedDocument brokenDocument = validSeedDocumentMock();
+		Mockito.when(brokenDocument.recallQuestions()).thenReturn(null);
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				List.of(brokenDocument),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningDocument[ec2-compute-capacity|EC2와 컴퓨팅 용량] recallQuestions must not be null");
+	}
+
+	@Test
+	void 학습_문서_relatedScenarioIds가_null이어도_NPE가_아닌_검증_오류를_계속_수집한다() {
+		SeedDocument brokenDocument = validSeedDocumentMock();
+		Mockito.when(brokenDocument.relatedScenarioIds()).thenReturn(null);
+		Mockito.when(brokenDocument.recallQuestions()).thenReturn(List.of(new LearningDocumentRecallQuestion(
+				"ec2-rq-single",
+				"단일 EC2의 위험은 무엇인가요?",
+				"단일 장애 지점입니다.",
+				"single-spring-boot"
+		)));
+
+		assertThatThrownBy(() -> validator.validate(
+				ScenarioSeedCatalog.scenarios(),
+				List.of(brokenDocument),
+				LearningRelations.all(),
+				CurriculumSeedCatalog.paths(),
+				CurriculumSeedCatalog.modules(),
+				ArchitecturePracticeSeedCatalog.practices()
+		))
+				.isInstanceOf(ContentIntegrityException.class)
+				.hasMessageContaining("learningDocument[ec2-compute-capacity|EC2와 컴퓨팅 용량] relatedScenarioIds must not be null")
+				.hasMessageContaining("recallQuestion[ec2-rq-single] relatedScenarioId must be included in relatedScenarioIds: single-spring-boot")
+				.hasMessageContaining("relatedScenarioIds must match explicit learning relations");
+	}
+
+	@Test
 	void 학습_경로가_다른_경로의_모듈을_참조하면_진단한다() {
 		LearningPath path = new LearningPath(
 				"path-a",
@@ -902,5 +944,23 @@ class ContentIntegrityValidatorTests {
 				return null;
 			}
 		};
+	}
+
+	private SeedDocument validSeedDocumentMock() {
+		SeedDocument document = Mockito.mock(SeedDocument.class);
+		Mockito.when(document.documentKey()).thenReturn("ec2-compute-capacity");
+		Mockito.when(document.title()).thenReturn("EC2와 컴퓨팅 용량");
+		Mockito.when(document.category()).thenReturn(DocumentCategory.EC2);
+		Mockito.when(document.level()).thenReturn(DocumentLevel.BEGINNER);
+		Mockito.when(document.summary()).thenReturn("요약");
+		Mockito.when(document.contentFileName()).thenReturn("ec2-compute-capacity.md");
+		Mockito.when(document.orderIndex()).thenReturn(1);
+		Mockito.when(document.prerequisiteDocumentIds()).thenReturn(List.of());
+		Mockito.when(document.conceptTags()).thenReturn(List.of("EC2"));
+		Mockito.when(document.relatedModuleIds()).thenReturn(List.of("single-server-deployment"));
+		Mockito.when(document.relatedScenarioIds()).thenReturn(List.of("single-spring-boot", "traffic-spike-compute"));
+		Mockito.when(document.checkpoints()).thenReturn(List.of());
+		Mockito.when(document.recallQuestions()).thenReturn(List.of());
+		return document;
 	}
 }
