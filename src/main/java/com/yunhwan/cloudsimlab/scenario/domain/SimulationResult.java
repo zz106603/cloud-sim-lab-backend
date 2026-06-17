@@ -17,6 +17,8 @@ public class SimulationResult {
 	private final ArchitectureGraph finalArchitectureGraph;
 	private final FailureImpactResult failureImpactResult;
 	private final List<RelatedLearningDocument> relatedLearningDocuments;
+	private final List<SimulationReflectionQuestion> reflectionQuestions;
+	private final SimulationRemediation remediation;
 
 	public SimulationResult(
 			Long scenarioId,
@@ -31,7 +33,9 @@ public class SimulationResult {
 			List<String> finalArchitecture,
 			ArchitectureGraph finalArchitectureGraph,
 			FailureImpactResult failureImpactResult,
-			List<RelatedLearningDocument> relatedLearningDocuments
+			List<RelatedLearningDocument> relatedLearningDocuments,
+			List<SimulationReflectionQuestion> reflectionQuestions,
+			SimulationRemediation remediation
 	) {
 		this.scenarioId = scenarioId;
 		this.resultType = resultType;
@@ -46,6 +50,8 @@ public class SimulationResult {
 		this.finalArchitectureGraph = finalArchitectureGraph == null ? new ArchitectureGraph(List.of(), List.of()) : finalArchitectureGraph;
 		this.failureImpactResult = failureImpactResult;
 		this.relatedLearningDocuments = relatedLearningDocuments == null ? List.of() : List.copyOf(relatedLearningDocuments);
+		this.reflectionQuestions = reflectionQuestions == null ? List.of() : List.copyOf(reflectionQuestions);
+		this.remediation = remediation == null ? new SimulationRemediation(List.of(), List.of(), List.of(), List.of()) : remediation;
 	}
 
 	public Long getScenarioId() {
@@ -98,5 +104,13 @@ public class SimulationResult {
 
 	public List<RelatedLearningDocument> getRelatedLearningDocuments() {
 		return relatedLearningDocuments;
+	}
+
+	public List<SimulationReflectionQuestion> getReflectionQuestions() {
+		return reflectionQuestions;
+	}
+
+	public SimulationRemediation getRemediation() {
+		return remediation;
 	}
 }

@@ -19,6 +19,8 @@ import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioObservationPoint;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioPrerequisiteConcept;
+import com.yunhwan.cloudsimlab.scenario.domain.SimulationReflectionQuestion;
+import com.yunhwan.cloudsimlab.scenario.domain.SimulationRemediation;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationReview;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResult;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
@@ -182,7 +184,9 @@ final class ScenarioDtos {
 			List<String> finalArchitecture,
 			ArchitectureGraphResponse finalArchitectureGraph,
 			FailureImpactResultResponse failureImpactResult,
-			List<RelatedLearningDocumentResponse> relatedLearningDocuments
+			List<RelatedLearningDocumentResponse> relatedLearningDocuments,
+			List<ReflectionQuestionResponse> reflectionQuestions,
+			RemediationResponse remediation
 	) {
 		static SimulationResponse from(SimulationResult result) {
 			return new SimulationResponse(
@@ -202,7 +206,11 @@ final class ScenarioDtos {
 					FailureImpactResultResponse.from(result.getFailureImpactResult()),
 					result.getRelatedLearningDocuments().stream()
 							.map(RelatedLearningDocumentResponse::from)
-							.toList()
+							.toList(),
+					result.getReflectionQuestions().stream()
+							.map(ReflectionQuestionResponse::from)
+							.toList(),
+					RemediationResponse.from(result.getRemediation())
 			);
 		}
 	}
@@ -261,6 +269,38 @@ final class ScenarioDtos {
 					review.limitations(),
 					review.missedTradeOffs(),
 					review.nextStep()
+			);
+		}
+	}
+
+	record ReflectionQuestionResponse(
+			String id,
+			String question,
+			Long relatedOptionId,
+			String relatedTradeOffPerspective
+	) {
+		static ReflectionQuestionResponse from(SimulationReflectionQuestion question) {
+			return new ReflectionQuestionResponse(
+					question.id(),
+					question.question(),
+					question.relatedOptionId(),
+					question.relatedTradeOffPerspective()
+			);
+		}
+	}
+
+	record RemediationResponse(
+			List<Long> reviewDocumentIds,
+			List<Long> retryScenarioIds,
+			List<Long> compareOptionIds,
+			List<String> missedDecisionCriteria
+	) {
+		static RemediationResponse from(SimulationRemediation remediation) {
+			return new RemediationResponse(
+					remediation.reviewDocumentIds(),
+					remediation.retryScenarioIds(),
+					remediation.compareOptionIds(),
+					remediation.missedDecisionCriteria()
 			);
 		}
 	}
