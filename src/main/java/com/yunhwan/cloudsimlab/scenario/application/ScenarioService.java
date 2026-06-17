@@ -26,6 +26,8 @@ import com.yunhwan.cloudsimlab.scenario.domain.Scenario;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioCategory;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioLevel;
 import com.yunhwan.cloudsimlab.scenario.domain.ScenarioOption;
+import com.yunhwan.cloudsimlab.scenario.domain.SimulationReflectionQuestion;
+import com.yunhwan.cloudsimlab.scenario.domain.SimulationRemediation;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationReview;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResult;
 import com.yunhwan.cloudsimlab.scenario.domain.SimulationResultType;
@@ -125,6 +127,7 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 		boolean satisfiesGoodCriteria = hasCoreOptions ? includesCoreOption : hasUsefulOption;
 		SimulationResultType resultType = determineResultType(hasUsefulOption, satisfiesGoodCriteria, riskScore);
 		List<String> finalArchitecture = finalArchitectureFor(scenario, selectedOptions);
+		List<RelatedLearningDocument> relatedLearningDocuments = relatedLearningDocumentsFor(scenario, resultType);
 		return new SimulationResult(
 				scenario.getId(),
 				resultType,
@@ -138,7 +141,9 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 				finalArchitecture,
 				ArchitectureGraphs.finalFor(scenario, selectedOptions),
 				FailureImpactFlows.resultFor(scenario, selectedOptions),
-				relatedLearningDocumentsFor(scenario, resultType)
+				relatedLearningDocuments,
+				reflectionQuestionsFor(scenario, selectedOptions, resultType),
+				remediationFor(scenario, selectedOptions, resultType, relatedLearningDocuments)
 		);
 	}
 
@@ -374,6 +379,145 @@ public class ScenarioService implements GetScenarioUseCase, SimulateScenarioUseC
 			case PARTIAL -> "남은 병목이 compute, network, storage, security 중 어디에 있는지 다시 좁히세요.";
 			case RISKY -> "적용 전에 위험을 줄일 보완 선택지나 운영 절차가 필요한지 확인하세요.";
 			case WRONG -> "먼저 시나리오의 병목과 장애 지점을 다시 식별한 뒤 그 원인을 직접 줄이는 선택지를 고르세요.";
+		};
+	}
+
+	private List<SimulationReflectionQuestion> reflectionQuestionsFor(
+			Scenario scenario,
+			List<ScenarioOption> selectedOptions,
+			SimulationResultType resultType
+	) {
+		return selectedOptions.stream()
+				.map(option -> reflectionQuestionFor(scenario, option, resultType))
+				.toList();
+	}
+
+	private SimulationReflectionQuestion reflectionQuestionFor(
+			Scenario scenario,
+			ScenarioOption option,
+			SimulationResultType resultType
+	) {
+		String perspective = primaryPerspectiveFor(option, scenario.getJudgmentPerspectives());
+		String optionKey = option.getGraphKey() == null ? String.valueOf(option.getId()) : option.getGraphKey();
+		return new SimulationReflectionQuestion(
+				"reflection-%s-%s-%s".formatted(scenarioKeyFor(scenario), optionKey, perspective),
+				reflectionQuestionText(option, resultType, perspective),
+				option.getId(),
+				perspective
+		);
+	}
+
+	private String scenarioKeyFor(Scenario scenario) {
+		return scenario.getGraphKey() == null ? String.valueOf(scenario.getId()) : scenario.getGraphKey();
+	}
+
+	private String reflectionQuestionText(ScenarioOption option, SimulationResultType resultType, String perspective) {
+		return switch (resultType) {
+			case GOOD -> "'%s' 선택이 %s 관점에서 좋아지는 대신 남기는 비용, 지연, 운영 조건은 무엇인가요?"
+					.formatted(option.getName(), perspective);
+			case PARTIAL -> "'%s' 선택만으로 해결되지 않는 핵심 병목이나 장애 지점은 무엇인가요?"
+					.formatted(option.getName());
+			case RISKY -> "'%s' 선택을 적용한다면 %s 관점의 부작용을 줄이기 위해 어떤 보완 선택지가 필요한가요?"
+					.formatted(option.getName(), perspective);
+			case WRONG -> "'%s' 선택이 현재 시나리오 목표의 직접 원인을 줄이지 못하는 이유는 무엇인가요?"
+					.formatted(option.getName());
+		};
+	}
+
+	private String primaryPerspectiveFor(ScenarioOption option, List<String> scenarioPerspectives) {
+		List<String> perspectives = scenarioPerspectives == null || scenarioPerspectives.isEmpty()
+				? List.of("performance", "availability", "cost", "complexity", "consistency", "security")
+				: scenarioPerspectives;
+		if (option.getRiskScore() > 0 && perspectives.contains("security")) {
+			return "security";
+		}
+		if (option.getRiskScore() > 0 && perspectives.contains("availability")) {
+			return "availability";
+		}
+		for (String perspective : perspectives) {
+			if (effectValue(option, perspective) < 0) {
+				return perspective;
+			}
+		}
+		for (String perspective : perspectives) {
+			if (effectValue(option, perspective) > 0) {
+				return perspective;
+			}
+		}
+		return perspectives.get(0);
+	}
+
+	private int effectValue(ScenarioOption option, String perspective) {
+		return switch (perspective) {
+			case "performance" -> option.getEffects().performance();
+			case "availability" -> option.getEffects().availability();
+			case "cost" -> option.getEffects().cost();
+			case "complexity" -> option.getEffects().complexity();
+			case "consistency" -> option.getEffects().consistency();
+			case "security" -> option.getEffects().security();
+			default -> 0;
+		};
+	}
+
+	private SimulationRemediation remediationFor(
+			Scenario scenario,
+			List<ScenarioOption> selectedOptions,
+			SimulationResultType resultType,
+			List<RelatedLearningDocument> relatedLearningDocuments
+	) {
+		return new SimulationRemediation(
+				relatedLearningDocuments.stream()
+						.map(RelatedLearningDocument::id)
+						.toList(),
+				List.of(scenario.getId()),
+				compareOptionIdsFor(scenario, selectedOptions, resultType),
+				missedDecisionCriteriaFor(scenario, selectedOptions, resultType)
+		);
+	}
+
+	private List<Long> compareOptionIdsFor(Scenario scenario, List<ScenarioOption> selectedOptions, SimulationResultType resultType) {
+		Set<Long> selectedOptionIds = selectedOptions.stream()
+				.map(ScenarioOption::getId)
+				.collect(Collectors.toSet());
+		Stream<ScenarioOption> candidates = switch (resultType) {
+			case GOOD -> scenario.getOptions().stream()
+					.filter(option -> !selectedOptionIds.contains(option.getId()));
+			case PARTIAL, WRONG -> scenario.getOptions().stream()
+					.filter(option -> !selectedOptionIds.contains(option.getId()))
+					.filter(option -> option.isCore() || option.getScore() > 0);
+			case RISKY -> scenario.getOptions().stream()
+					.filter(option -> !selectedOptionIds.contains(option.getId()))
+					.filter(option -> option.getRiskScore() == 0 && (option.isCore() || option.getScore() > 0));
+		};
+		return candidates
+				.map(ScenarioOption::getId)
+				.toList();
+	}
+
+	private List<String> missedDecisionCriteriaFor(
+			Scenario scenario,
+			List<ScenarioOption> selectedOptions,
+			SimulationResultType resultType
+	) {
+		List<String> optionCriteria = selectedOptions.stream()
+				.map(option -> criterionFor(option, resultType, primaryPerspectiveFor(option, scenario.getJudgmentPerspectives())))
+				.toList();
+		if (!optionCriteria.isEmpty()) {
+			return optionCriteria;
+		}
+		return List.of(nextStepFor(resultType));
+	}
+
+	private String criterionFor(ScenarioOption option, SimulationResultType resultType, String perspective) {
+		return switch (resultType) {
+			case GOOD -> "'%s' 선택의 효과를 유지하면서 %s 관점의 비용이나 운영 조건을 추가로 비교해야 합니다."
+					.formatted(option.getName(), perspective);
+			case PARTIAL -> "'%s' 선택은 일부 도움을 주지만 핵심 선택지와 비교해 남는 %s 관점의 병목을 확인해야 합니다."
+					.formatted(option.getName(), perspective);
+			case RISKY -> "'%s' 선택은 효과보다 %s 관점의 부작용이 커질 수 있어 보완 조건을 먼저 확인해야 합니다."
+					.formatted(option.getName(), perspective);
+			case WRONG -> "'%s' 선택이 현재 문제의 병목, 장애 지점, 보안 경계 중 어느 원인을 직접 줄이는지 다시 판단해야 합니다."
+					.formatted(option.getName());
 		};
 	}
 }
