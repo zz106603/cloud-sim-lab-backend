@@ -38,7 +38,15 @@ class LearningModuleControllerTests {
 				.andExpect(jsonPath("$.documentIds", hasSize(4)))
 				.andExpect(jsonPath("$.documentIds[0]").value("rds-connection-management"))
 				.andExpect(jsonPath("$.relatedScenarioIds", hasSize(4)))
-				.andExpect(jsonPath("$.relatedScenarioIds[0]").value("rds-failure"));
+				.andExpect(jsonPath("$.relatedScenarioIds[0]").value("rds-failure"))
+				.andExpect(jsonPath("$.practiceActivities", hasSize(9)))
+				.andExpect(jsonPath("$.practiceActivities[0].type").value("READ_DOCUMENT"))
+				.andExpect(jsonPath("$.practiceActivities[0].targetResourceId").value("rds-connection-management"))
+				.andExpect(jsonPath("$.practiceActivities[0].recommendedOrder").value(1))
+				.andExpect(jsonPath("$.practiceActivities[4].type").value("RUN_SCENARIO"))
+				.andExpect(jsonPath("$.practiceActivities[4].targetResourceId").value("rds-failure"))
+				.andExpect(jsonPath("$.practiceActivities[8].type").value("BUILD_ARCHITECTURE"))
+				.andExpect(jsonPath("$.practiceActivities[8].targetResourceId").value("read-heavy-scaling-practice"));
 	}
 
 	@Test

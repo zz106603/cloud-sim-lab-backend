@@ -15,6 +15,8 @@ import com.yunhwan.cloudsimlab.architecturepractice.domain.ArchitecturePracticeT
 import com.yunhwan.cloudsimlab.learningdocument.adapter.out.persistence.LearningDocumentSeedCatalog.SeedDocument;
 import com.yunhwan.cloudsimlab.learningdocument.domain.DocumentCategory;
 import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModule;
+import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivity;
+import com.yunhwan.cloudsimlab.learningmodule.domain.LearningModulePracticeActivityType;
 import com.yunhwan.cloudsimlab.learningpath.domain.LearningPath;
 import com.yunhwan.cloudsimlab.learningrelation.domain.LearningRelation;
 import com.yunhwan.cloudsimlab.scenario.domain.ArchitectureEdge;
@@ -734,6 +736,7 @@ public class ContentIntegrityValidator {
 			validateDocumentReferences(module, documentKeys, errors);
 			validateScenarioReferences(module, scenarioKeys, errors);
 			validateArchitecturePracticeReferences(module, architecturePracticeIds, errors);
+			validatePracticeActivities(module, documentKeys, scenarioKeys, architecturePracticeIds, errors);
 		}
 
 		return moduleIds;
@@ -801,6 +804,92 @@ public class ContentIntegrityValidator {
 			if (hasText(practiceId) && !architecturePracticeIds.contains(practiceId)) {
 				errors.add(moduleLabel + " references unknown relatedArchitecturePracticeId: " + practiceId);
 			}
+		}
+	}
+
+	private void validatePracticeActivities(
+			LearningModule module,
+			Set<String> documentKeys,
+			Set<String> scenarioKeys,
+			Set<String> architecturePracticeIds,
+			List<String> errors
+	) {
+		String moduleLabel = moduleLabel(module);
+		validateObjectList(module.practiceActivities(), moduleLabel, "practiceActivities", true, errors);
+		Set<String> activityIds = new HashSet<>();
+		Set<Integer> recommendedOrders = new HashSet<>();
+		boolean hasApplyActivity = false;
+
+		for (LearningModulePracticeActivity activity : module.practiceActivities()) {
+			if (activity == null) {
+				continue;
+			}
+			String activityLabel = moduleLabel + " practiceActivity[" + activity.id() + "]";
+			validateText(activity.id(), activityLabel, "id", errors);
+			validateTrimmed(activity.id(), activityLabel, "id", errors);
+			validateText(activity.title(), activityLabel, "title", errors);
+			validateText(activity.description(), activityLabel, "description", errors);
+			validateText(activity.targetResourceId(), activityLabel, "targetResourceId", errors);
+			validateTrimmed(activity.targetResourceId(), activityLabel, "targetResourceId", errors);
+			if (hasText(activity.id()) && !activityIds.add(activity.id())) {
+				errors.add(moduleLabel + " practiceActivities has duplicated id: " + activity.id());
+			}
+			if (activity.recommendedOrder() < 1) {
+				errors.add(activityLabel + " recommendedOrder must be greater than 0: " + activity.recommendedOrder());
+			}
+			else if (!recommendedOrders.add(activity.recommendedOrder())) {
+				errors.add(moduleLabel + " practiceActivities has duplicated recommendedOrder: " + activity.recommendedOrder());
+			}
+			validatePracticeActivityTarget(module, activity, documentKeys, scenarioKeys, architecturePracticeIds, errors);
+			if (activity.type() == LearningModulePracticeActivityType.RUN_SCENARIO
+					|| activity.type() == LearningModulePracticeActivityType.BUILD_ARCHITECTURE) {
+				hasApplyActivity = true;
+			}
+		}
+		if (!hasApplyActivity) {
+			errors.add(moduleLabel + " practiceActivities must include at least one RUN_SCENARIO or BUILD_ARCHITECTURE activity");
+		}
+	}
+
+	private void validatePracticeActivityTarget(
+			LearningModule module,
+			LearningModulePracticeActivity activity,
+			Set<String> documentKeys,
+			Set<String> scenarioKeys,
+			Set<String> architecturePracticeIds,
+			List<String> errors
+	) {
+		String activityLabel = moduleLabel(module) + " practiceActivity[" + activity.id() + "]";
+		if (activity.type() == null) {
+			errors.add(activityLabel + " type must not be null");
+			return;
+		}
+		if (activity.type() == LearningModulePracticeActivityType.READ_DOCUMENT) {
+			if (hasText(activity.targetResourceId()) && !documentKeys.contains(activity.targetResourceId())) {
+				errors.add(activityLabel + " references unknown document targetResourceId: " + activity.targetResourceId());
+			}
+			if (hasText(activity.targetResourceId()) && !module.documentIds().contains(activity.targetResourceId())) {
+				errors.add(activityLabel + " targetResourceId must be included in module documentIds: " + activity.targetResourceId());
+			}
+			return;
+		}
+		if (activity.type() == LearningModulePracticeActivityType.RUN_SCENARIO) {
+			if (hasText(activity.targetResourceId()) && !scenarioKeys.contains(activity.targetResourceId())) {
+				errors.add(activityLabel + " references unknown scenario targetResourceId: " + activity.targetResourceId());
+			}
+			if (hasText(activity.targetResourceId()) && !module.relatedScenarioIds().contains(activity.targetResourceId())) {
+				errors.add(activityLabel + " targetResourceId must be included in module relatedScenarioIds: " + activity.targetResourceId());
+			}
+			return;
+		}
+		if (architecturePracticeIds == null) {
+			return;
+		}
+		if (hasText(activity.targetResourceId()) && !architecturePracticeIds.contains(activity.targetResourceId())) {
+			errors.add(activityLabel + " references unknown architecture practice targetResourceId: " + activity.targetResourceId());
+		}
+		if (hasText(activity.targetResourceId()) && !module.relatedArchitecturePracticeIds().contains(activity.targetResourceId())) {
+			errors.add(activityLabel + " targetResourceId must be included in module relatedArchitecturePracticeIds: " + activity.targetResourceId());
 		}
 	}
 
@@ -1049,6 +1138,21 @@ public class ContentIntegrityValidator {
 			validateTrimmed(value, label, fieldName, errors);
 			if (hasText(value) && !uniqueValues.add(value)) {
 				errors.add(label + " " + fieldName + " has duplicated value: " + value);
+			}
+		}
+	}
+
+	private void validateObjectList(List<?> values, String label, String fieldName, boolean required, List<String> errors) {
+		if (values == null) {
+			errors.add(label + " " + fieldName + " must not be null");
+			return;
+		}
+		if (required && values.isEmpty()) {
+			errors.add(label + " " + fieldName + " must not be empty");
+		}
+		for (Object value : values) {
+			if (value == null) {
+				errors.add(label + " " + fieldName + " must not contain null");
 			}
 		}
 	}
