@@ -28,4 +28,12 @@ class TradeOffEffectsTests {
 		assertThat(TradeOffSummary.from(options))
 				.isEqualTo(new TradeOffSummary(5, 3, -5, -5, -5, 0));
 	}
+
+	@Test
+	void 선택지_효과가_null이면_중립_효과로_보정한다() {
+		ScenarioOption option = ScenarioOption.newOption("기본 선택지", "설명", 1, false, 0, null);
+
+		assertThat(option.getEffects()).isEqualTo(TradeOffEffects.none());
+		assertThat(TradeOffSummary.from(List.of(option))).isEqualTo(new TradeOffSummary(0, 0, 0, 0, 0, 0));
+	}
 }
