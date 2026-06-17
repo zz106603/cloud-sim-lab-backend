@@ -206,6 +206,7 @@ class ScenarioControllerTests {
 	@Test
 	void 핵심_선택지를_고르면_GOOD_시뮬레이션_결과와_관련_문서를_반환한다() throws Exception {
 		Long coreOptionId = optionId(computeScenario, ScenarioOption::isCore);
+		Long compareOptionId = optionId(computeScenario, option -> !option.isCore());
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -242,7 +243,16 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].title").value("Virtual machines and compute capacity"))
 				.andExpect(jsonPath("$.relatedLearningDocuments[0].reviewReason").value(
 						"복습 초점: scale-up과 scale-out이 용량과 장애 대응에 만드는 차이"
-				));
+				))
+				.andExpect(jsonPath("$.reflectionQuestions", hasSize(1)))
+				.andExpect(jsonPath("$.reflectionQuestions[0].id").value("reflection-single-spring-boot-%d-availability".formatted(coreOptionId)))
+				.andExpect(jsonPath("$.reflectionQuestions[0].relatedOptionId").value(coreOptionId))
+				.andExpect(jsonPath("$.reflectionQuestions[0].relatedTradeOffPerspective").value("availability"))
+				.andExpect(jsonPath("$.reflectionQuestions[0].question", containsString("운영 조건")))
+				.andExpect(jsonPath("$.remediation.reviewDocumentIds[0]").value(computeDocument.getId()))
+				.andExpect(jsonPath("$.remediation.retryScenarioIds[0]").value(computeScenario.getId()))
+				.andExpect(jsonPath("$.remediation.compareOptionIds[0]").value(compareOptionId))
+				.andExpect(jsonPath("$.remediation.missedDecisionCriteria[0]", containsString("추가로 비교")));
 	}
 
 	@Test
@@ -316,6 +326,7 @@ class ScenarioControllerTests {
 	@Test
 	void 핵심_선택지가_빠진_유효한_선택지는_PARTIAL_결과와_한계를_반환한다() throws Exception {
 		Long partialOptionId = optionId(computeScenario, option -> option.getName().equals("작은 EC2 인스턴스 유지"));
+		Long coreOptionId = optionId(computeScenario, ScenarioOption::isCore);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", computeScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -328,7 +339,12 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.riskScore").value(0))
 				.andExpect(jsonPath("$.detail", containsString("핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다.")))
 				.andExpect(jsonPath("$.review.limitations[0]").value("핵심 선택지가 빠져 주요 병목이나 장애 지점이 남습니다."))
-				.andExpect(jsonPath("$.detail", containsString("작은 EC2 인스턴스 유지는 비용은 낮지만 용량이 제한적입니다.")));
+				.andExpect(jsonPath("$.detail", containsString("작은 EC2 인스턴스 유지는 비용은 낮지만 용량이 제한적입니다.")))
+				.andExpect(jsonPath("$.reflectionQuestions[0].relatedOptionId").value(partialOptionId))
+				.andExpect(jsonPath("$.reflectionQuestions[0].question", containsString("해결되지 않는 핵심 병목")))
+				.andExpect(jsonPath("$.remediation.retryScenarioIds[0]").value(computeScenario.getId()))
+				.andExpect(jsonPath("$.remediation.compareOptionIds[0]").value(coreOptionId))
+				.andExpect(jsonPath("$.remediation.missedDecisionCriteria[0]", containsString("핵심 선택지와 비교")));
 	}
 
 	@Test
@@ -347,7 +363,14 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.detail", containsString("위험 점수가 높아 부작용을 먼저 검토해야 합니다.")))
 				.andExpect(jsonPath("$.review.limitations[0]").value("효과가 있더라도 운영 위험을 줄일 보완 조건이 필요합니다."))
 				.andExpect(jsonPath("$.review.missedTradeOffs[0]", containsString("보안 노출")))
-				.andExpect(jsonPath("$.detail", containsString("보안 노출")));
+				.andExpect(jsonPath("$.detail", containsString("보안 노출")))
+				.andExpect(jsonPath("$.reflectionQuestions[0].relatedOptionId").value(riskyOptionId))
+				.andExpect(jsonPath("$.reflectionQuestions[0].relatedTradeOffPerspective").value("security"))
+				.andExpect(jsonPath("$.reflectionQuestions[0].question", containsString("부작용을 줄이기")))
+				.andExpect(jsonPath("$.remediation.reviewDocumentIds", hasSize(0)))
+				.andExpect(jsonPath("$.remediation.retryScenarioIds[0]").value(networkScenario.getId()))
+				.andExpect(jsonPath("$.remediation.compareOptionIds", hasSize(0)))
+				.andExpect(jsonPath("$.remediation.missedDecisionCriteria[0]", containsString("부작용")));
 	}
 
 	@Test
@@ -367,10 +390,19 @@ class ScenarioControllerTests {
 								false,
 								0,
 								new TradeOffEffects(3, 3, 3, 3, 3, 3)
+						),
+						ScenarioOption.newOption(
+								"Read Replica 추가",
+								"읽기 부하를 분산해 RDS 조회 병목을 줄입니다.",
+								2,
+								true,
+								0,
+								new TradeOffEffects(2, 2, -2, -2, -2, 0)
 						)
 				)
 		));
 		Long wrongOptionId = optionId(wrongScenario, option -> option.getScore() == 0);
+		Long compareOptionId = optionId(wrongScenario, ScenarioOption::isCore);
 
 		mockMvc.perform(post("/api/scenarios/{scenarioId}/simulate", wrongScenario.getId())
 						.contentType(MediaType.APPLICATION_JSON)
@@ -383,7 +415,12 @@ class ScenarioControllerTests {
 				.andExpect(jsonPath("$.riskScore").value(0))
 				.andExpect(jsonPath("$.tradeOffSummary.performance").value(3))
 				.andExpect(jsonPath("$.detail", containsString("원인을 직접 줄이는 선택지가 포함되지 않았습니다.")))
-				.andExpect(jsonPath("$.detail", containsString("점수가 없는 선택지")));
+				.andExpect(jsonPath("$.detail", containsString("점수가 없는 선택지")))
+				.andExpect(jsonPath("$.reflectionQuestions[0].relatedOptionId").value(wrongOptionId))
+				.andExpect(jsonPath("$.reflectionQuestions[0].question", containsString("직접 원인을 줄이지 못하는 이유")))
+				.andExpect(jsonPath("$.remediation.retryScenarioIds[0]").value(wrongScenario.getId()))
+				.andExpect(jsonPath("$.remediation.compareOptionIds[0]").value(compareOptionId))
+				.andExpect(jsonPath("$.remediation.missedDecisionCriteria[0]", containsString("직접 줄이는지 다시 판단")));
 	}
 
 	@Test
