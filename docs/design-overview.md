@@ -732,8 +732,20 @@ EC2
 | documentIds | 포함된 학습 문서 ID 목록 |
 | relatedScenarioIds | 모듈과 연결된 시나리오 ID 목록 |
 | relatedArchitecturePracticeIds | 모듈과 연결된 아키텍처 연습 ID 목록 |
+| practiceActivities | 모듈 화면에서 추천 순서대로 보여줄 문서 읽기, 시나리오 실행, 아키텍처 작성 활동 목록 |
 
 모듈은 학습 순서를 강제하기 위한 잠금 단위가 아니라, 초보자가 왜 이 문서를 먼저 보는지 이해할 수 있게 돕는 안내 단위다.
+
+## LearningModulePracticeActivity
+
+| 필드 | 설명 |
+| --- | --- |
+| id | 활동 ID |
+| type | READ_DOCUMENT / RUN_SCENARIO / BUILD_ARCHITECTURE |
+| title | 활동 제목 |
+| description | 활동 설명 |
+| targetResourceId | 이동 대상 문서, 시나리오, 아키텍처 연습 ID |
+| recommendedOrder | 모듈 안의 추천 수행 순서 |
 
 ---
 
@@ -837,7 +849,7 @@ GET /api/learning-paths/{pathId}
 GET /api/learning-modules/{moduleId}
 ```
 
-모듈 단위 학습 화면에서 필요한 문서 목록, 학습 목표, 선행 조건, 관련 실습 연결을 반환한다.
+모듈 단위 학습 화면에서 필요한 문서 목록, 학습 목표, 선행 조건, 관련 실습 연결과 추천 실습 활동(`practiceActivities`)을 반환한다. 활동은 문서 읽기, 시나리오 실행, 아키텍처 작성 순서로 안정적으로 정렬된다.
 
 ---
 
